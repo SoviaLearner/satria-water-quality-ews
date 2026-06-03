@@ -1,6 +1,6 @@
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { predictionFields } from "./constants";
-import { loadModelInfo, runPrediction } from "./services/api";
+import { loadModelInfo, runBatchPrediction, runPrediction } from "./services/api";
 import {
   loadEdaRows,
   loadPredictionLogs,
@@ -33,6 +33,8 @@ function bindEvents() {
   document.querySelector("#logoutButton")?.addEventListener("click", handleLogout);
   document.querySelector("#authForm")?.addEventListener("submit", handleAuthSubmit);
   document.querySelector("#predictionForm")?.addEventListener("submit", handlePredictionSubmit);
+  document.querySelector("#bulkPredictionFile")?.addEventListener("change", handleBulkPredictionUpload);
+  document.querySelector("#downloadReportsCsv")?.addEventListener("click", handleDownloadReportsCsv);
   document.querySelector("#profileForm")?.addEventListener("submit", handleProfileSave);
   document.querySelector("#securityForm")?.addEventListener("submit", handleSecuritySave);
   document.querySelectorAll("#refreshData, [data-refresh]").forEach((element) => {
@@ -65,11 +67,24 @@ function bindEvents() {
     element.addEventListener("click", () => {
       state.currentPage = element.dataset.page as AppPage;
       state.message = "";
+      if (!state.session && state.currentPage !== "home") {
+        state.authMode = "login";
+        render();
+        return;
+      }
       if (["analytics", "reports", "eda"].includes(state.currentPage)) {
         loadRealtimeData().then(render);
       } else {
         render();
       }
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-auth-mode]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.authMode = element.dataset.authMode === "register" ? "register" : "login";
+      state.currentPage = "login";
+      state.message = "";
+      render();
     });
   });
 }
@@ -148,6 +163,76 @@ async function handlePredictionSubmit(event: Event) {
 
   state.loading = false;
   render();
+}
+
+async function handleBulkPredictionUpload(event: Event) {
+  const input = event.currentTarget as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  state.loading = true;
+  state.message = "";
+  render();
+
+  try {
+    const parsed = JSON.parse(await file.text());
+    const rows = Array.isArray(parsed) ? parsed : parsed.data;
+    if (!Array.isArray(rows) || !rows.length) {
+      throw new Error("File JSON harus berisi array data prediksi.");
+    }
+
+    const payload = rows.map((row) => {
+      const record: Record<string, number> = {};
+      predictionFields.forEach(([name]) => {
+        record[name] = Number(row[name]);
+      });
+      if (Object.values(record).some((value) => !Number.isFinite(value))) {
+        throw new Error("Semua item JSON harus memakai field parameter API yang valid.");
+      }
+      return record;
+    });
+
+    const results = await runBatchPrediction(payload);
+    state.latestPrediction = results[0] || null;
+    for (let index = 0; index < results.length; index += 1) {
+      await savePredictionLog(state.session, payload[index], results[index]);
+    }
+    state.predictionLogs = await loadPredictionLogs(state.session);
+    state.message = `${results.length} prediksi dari JSON berhasil diproses dan disimpan.`;
+  } catch (error) {
+    state.message = error instanceof Error ? error.message : "Bulk prediction gagal.";
+  }
+
+  state.loading = false;
+  render();
+}
+
+function handleDownloadReportsCsv() {
+  if (!state.predictionLogs.length) {
+    state.message = "Belum ada report untuk di-export.";
+    render();
+    return;
+  }
+
+  const header = ["created_at", "status", "ph", "temperature", "dissolved_oxygen_mg_l"];
+  const rows = state.predictionLogs.map((log) =>
+    [
+      log.created_at,
+      log.predicted_suitability_tier,
+      log.input_data?.ph ?? "",
+      log.input_data?.temperature ?? "",
+      log.input_data?.dissolved_oxygen_mg_l ?? "",
+    ]
+      .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+      .join(","),
+  );
+  const csv = [header.join(","), ...rows].join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "satria-prediction-reports.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 async function handleForgotPassword() {

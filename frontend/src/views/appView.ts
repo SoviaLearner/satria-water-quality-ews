@@ -13,6 +13,7 @@ import {
 } from "./charts";
 
 export function renderApp(state: AppState) {
+  if (!state.session && state.currentPage !== "login") return renderPublicHomePage(state);
   return state.session ? renderPlatform(state) : renderAuthPage(state);
 }
 
@@ -65,6 +66,19 @@ function renderPlatform(state: AppState) {
     <main class="platform-shell">
       ${renderPlatformNav(state)}
       ${renderCurrentPage(state)}
+    </main>
+  `;
+}
+
+function renderPublicHomePage(state: AppState) {
+  return `
+    <main class="platform-shell public-shell">
+      <nav class="platform-nav">
+        <button class="brand platform-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
+        <div class="platform-links"><button class="active" type="button" data-page="home">Home</button><button type="button" data-auth-mode="login">Prediction</button><button type="button" data-auth-mode="login">Analytics</button><button type="button" data-auth-mode="login">Reports</button><button type="button" data-auth-mode="login">EDA</button></div>
+        <div class="public-auth-actions"><button type="button" data-auth-mode="login">Login</button><button type="button" data-auth-mode="register">Register</button></div>
+      </nav>
+      ${renderHomePage(state)}
     </main>
   `;
 }
@@ -163,18 +177,17 @@ function renderHomeFooter() {
 }
 
 function renderPredictionPage(state: AppState) {
-  const accuracy = state.modelInfo?.metrics?.accuracy;
   const modelName = state.modelInfo?.model_name || "LightGBM";
   return `
     <section class="work-page prediction-page">
       <div class="page-heading"><h1>Manual Parameter Input</h1><p>Enter current water quality metrics to get a real-time health classification from the LightGBM model.</p></div>
       <div class="model-strip">
         <div><span>Active Model</span><strong>${escapeHtml(modelName.toUpperCase())}</strong></div>
-        <div><span>Training Accuracy</span><strong>${accuracy ? `${(accuracy * 100).toFixed(2)}%` : "99.77%"}</strong></div>
         <div><span>Input Features</span><strong>${state.modelInfo?.features?.length || predictionFields.length}</strong></div>
+        <div><span>Prediction Classes</span><strong>${state.modelInfo?.classes?.length || 3}</strong></div>
       </div>
       <div class="prediction-layout">
-        <form class="prediction-form" id="predictionForm"><div class="parameter-grid">${predictionFields.map(([name, label, value]) => `<label><span>${label}</span><input name="${name}" type="number" step="any" value="${value}" required /></label>`).join("")}</div><button class="execute-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button></form>
+        <form class="prediction-form" id="predictionForm"><div class="parameter-grid">${predictionFields.map(([name, label, value]) => `<label><span>${label}</span><small>Masukkan angka desimal sesuai satuan parameter.</small><input name="${name}" type="number" step="any" value="${value}" required /></label>`).join("")}</div><button class="execute-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
         <aside class="result-panel">${state.latestPrediction ? renderPredictionResult(state) : `<div class="empty-result"><strong>Results will appear here</strong><span>after calculation</span></div>`}</aside>
       </div>
       <div class="prediction-bottom"><article class="how-card"><strong>How it works</strong><p>The SATRIA model analyzes 14 parameters against the cleaned aquaculture dataset and stores user prediction logs to Supabase.</p></article><article class="recent-card"><h2>Recent Tests</h2>${renderRecentList(state.predictionLogs.slice(0, 2), state)}</article></div>
@@ -184,7 +197,18 @@ function renderPredictionPage(state: AppState) {
 
 function renderPredictionResult(state: AppState) {
   const result = state.latestPrediction!;
-  return `<div class="result-ready"><span class="result-badge">${escapeHtml(result.predicted_suitability_tier)}</span><h2>${escapeHtml(result.predicted_suitability_tier)}</h2><p>Class ID: ${result.predicted_class_id}</p>${Object.entries(result.probabilities).map(([key, value]) => `<div class="prob-row"><span>${escapeHtml(key)}</span><strong>${(value * 100).toFixed(2)}%</strong></div>`).join("")}</div>`;
+  return `<div class="result-ready"><span class="result-badge">${escapeHtml(result.predicted_suitability_tier)}</span><h2>${escapeHtml(result.predicted_suitability_tier)}</h2><p>Class ID: ${result.predicted_class_id}</p>${renderRecommendation(result.predicted_suitability_tier)}${Object.entries(result.probabilities).map(([key, value]) => `<div class="prob-row"><span>${escapeHtml(key)}</span><strong>${(value * 100).toFixed(2)}%</strong></div>`).join("")}</div>`;
+}
+
+function renderRecommendation(tier: string) {
+  const normalized = tier.toLowerCase();
+  const tone = normalized.includes("optimal") ? "optimal" : normalized.includes("moderate") ? "moderate" : "unsafe";
+  const message = normalized.includes("optimal")
+    ? "Kondisi air optimal. Pertahankan monitoring rutin dan hindari perubahan parameter mendadak."
+    : normalized.includes("moderate")
+      ? "Kondisi air cukup baik, tetapi perlu pemantauan pH, DO, nitrite, dan ammonia sebelum pemberian pakan berikutnya."
+      : "Kondisi air berisiko. Segera lakukan aerasi, penggantian air parsial, dan pengecekan senyawa toksik.";
+  return `<article class="recommendation-card ${tone}"><strong>Rekomendasi Tindakan</strong><p>${escapeHtml(message)}</p></article>`;
 }
 
 function renderAnalyticsPage(state: AppState) {
@@ -194,7 +218,7 @@ function renderAnalyticsPage(state: AppState) {
 }
 
 function renderReportsPage(state: AppState) {
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Historical Log Reports</h1><p>Comprehensive archive of your prediction history and ML classifications.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>Sync Supabase</button><button type="button" disabled>Sort by Date (Newest)</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${filteredLogs(state).length} of ${state.predictionLogs.length} entries from Supabase prediction_results.</footer></section>`;
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Historical Log Reports</h1><p>Comprehensive archive of your prediction history and ML classifications.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh Logs</button></div><div class="report-toolbar"><input id="reportSearch" placeholder="Search by status..." value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>Sync Supabase</button><button type="button" id="downloadReportsCsv">Download CSV</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>Timestamp</th><th>User</th><th>Parameters (pH/Temp/DO)</th><th>Status</th><th>Actions</th></tr></thead><tbody>${renderReportRows(state)}</tbody></table></div><footer class="reports-footer">Showing ${filteredLogs(state).length} of ${state.predictionLogs.length} entries from Supabase prediction_results.</footer>${state.message ? `<div class="message">${state.message}</div>` : ""}</section>`;
 }
 
 function renderReportRows(state: AppState) {

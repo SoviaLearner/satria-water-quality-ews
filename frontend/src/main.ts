@@ -2,9 +2,11 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { predictionFields } from "./constants";
 import { loadModelInfo, runBatchPrediction, runPrediction } from "./services/api";
 import {
+  loadEdaRowCount,
   loadEdaRows,
   loadPredictionLogs,
   loadProfile,
+  loadUserRiskCount,
   savePredictionLog,
   saveProfile,
   saveSecuritySettings,
@@ -16,6 +18,7 @@ import { renderApp } from "./views/appView";
 import "./styles.css";
 
 const app = document.querySelector<HTMLDivElement>("#app");
+let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 
 if (!app) {
   throw new Error("Root app element tidak ditemukan.");
@@ -276,9 +279,10 @@ async function handleProfileSave(event: Event) {
 
   const formData = new FormData(event.currentTarget as HTMLFormElement);
   const role = String(formData.get("role") || "").trim();
+  const organization = String(formData.get("organization") || "").trim();
   const bio = String(formData.get("bio") || "").trim();
-  if (!role || !bio) {
-    state.message = "Role dan Bio wajib diisi sebelum mengakses fitur utama.";
+  if (!role || !organization || !bio) {
+    state.message = "Role, Organization, dan Bio wajib diisi sebelum mengakses fitur utama.";
     render();
     return;
   }
@@ -323,6 +327,10 @@ async function handleSecuritySave(event: Event) {
 
 async function handleLogout() {
   await supabase.auth.signOut();
+  if (realtimeChannel) {
+    await supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
   state.session = null;
   state.profile = null;
   state.predictionLogs = [];
@@ -335,6 +343,7 @@ async function refreshUserData() {
   state.profile = await loadProfile(state.session);
   state.modelInfo = await loadModelInfo();
   await loadRealtimeData();
+  setupRealtimeSubscriptions();
   if (state.session && !isProfileComplete()) {
     state.currentPage = "settings";
     state.settingsTab = "profile";
@@ -343,16 +352,58 @@ async function refreshUserData() {
 }
 
 function isProfileComplete() {
-  return Boolean(state.profile?.role?.trim() && state.profile?.bio?.trim());
+  return Boolean(state.profile?.role?.trim() && state.profile?.organization?.trim() && state.profile?.bio?.trim());
 }
 
 async function loadRealtimeData() {
-  const [predictionLogs, edaRows] = await Promise.all([
+  const [predictionLogs, edaRows, edaTotalRows, userRiskCount] = await Promise.all([
     loadPredictionLogs(state.session),
     loadEdaRows(),
+    loadEdaRowCount(),
+    loadUserRiskCount(state.session),
   ]);
   state.predictionLogs = predictionLogs;
   state.edaRows = edaRows;
+  state.edaTotalRows = edaTotalRows || edaRows.length;
+  state.userRiskCount = userRiskCount;
+}
+
+function setupRealtimeSubscriptions() {
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+
+  if (!state.session) {
+    state.realtimeConnected = false;
+    return;
+  }
+
+  realtimeChannel = supabase
+    .channel(`satria-realtime-${state.session.user.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "prediction_results",
+        filter: `user_id=eq.${state.session.user.id}`,
+      },
+      () => loadRealtimeData().then(render),
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "water_quality_clean",
+      },
+      () => loadRealtimeData().then(render),
+    )
+    .subscribe((status) => {
+      state.realtimeConnected = status === "SUBSCRIBED";
+      render();
+    });
 }
 
 supabase.auth.getSession().then(({ data }) => {

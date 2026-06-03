@@ -58,6 +58,7 @@ export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondary
       <span><i class="teal"></i>${escapeHtml(primaryMeta?.label || primaryKey)}</span>
       <span><i class="blue"></i>${escapeHtml(secondaryMeta?.label || secondaryKey)}</span>
     </div>
+    <p class="chart-help">Cara baca: garis naik berarti nilai parameter meningkat pada sampel berikutnya. Garis putus-putus menjadi pembanding suhu agar perubahan kualitas air lebih mudah dibandingkan.</p>
     <div class="svg-chart line-chart">
       <svg viewBox="0 0 640 260" preserveAspectRatio="none" role="img" aria-label="Line chart">
         ${renderGridLines()}
@@ -82,6 +83,7 @@ export function renderHistogram(rows: EdaRecord[], key: string) {
 
   return `
     <div class="chart-caption">${escapeHtml(meta?.label || key)} distribution from ${nums.length} Supabase rows</div>
+    <p class="chart-help">Cara baca: batang yang lebih tinggi berarti lebih banyak data berada pada rentang nilai tersebut. Distribusi yang melebar menunjukkan variasi parameter lebih besar.</p>
     ${renderChartStats(nums, meta?.unit)}
     <div class="svg-chart histogram-chart">
       ${bins
@@ -104,6 +106,7 @@ export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1") {
 
   return `
     <div class="chart-caption">${escapeHtml(meta?.label || key)} sampled levels</div>
+    <p class="chart-help">Cara baca: setiap batang adalah sampel riwayat. Batang tinggi menunjukkan nilai parameter lebih besar dibanding sampel lain pada grafik yang sama.</p>
     ${renderChartStats(nums, meta?.unit)}
     <div class="svg-chart bar-chart">
       ${nums
@@ -131,6 +134,7 @@ export function renderDonut(logs: PredictionLog[]) {
 
   return `
     <div class="donut" style="--donut-bg:conic-gradient(#0fb5a5 0 ${optimal}%, #ffc700 ${optimal}% ${moderateEnd}%, #ff7a59 ${moderateEnd}% 100%)"></div>
+    <p class="chart-help centered">Cara baca: warna dominan menunjukkan kategori prediksi yang paling sering muncul pada riwayat user.</p>
     <div class="donut-legend">
       ${Object.entries(counts).map(([label, count]) => `<span class="${statusClass(label)}">${escapeHtml(label)}: ${count}</span>`).join("") || "<span>No prediction logs yet</span>"}
     </div>
@@ -139,7 +143,7 @@ export function renderDonut(logs: PredictionLog[]) {
 
 export function renderHeatmap(rows: EdaRecord[]) {
   const keys = ["ph", "temperature", "dissolved_oxygen_mg_l", "nitrite_mg_l_1", "ammonia_mg_l_1"];
-  return `<div class="heatmap-axis"><span></span>${keys.map((key) => `<strong>${shortLabel(key)}</strong>`).join("")}${keys
+  return `<p class="chart-help">Cara baca: nilai mendekati 1 berarti hubungan antar parameter searah kuat, mendekati -1 berarti berlawanan, dan mendekati 0 berarti hubungannya lemah.</p><div class="heatmap-axis"><span></span>${keys.map((key) => `<strong>${shortLabel(key)}</strong>`).join("")}${keys
     .flatMap((rowKey) =>
       [`<strong>${shortLabel(rowKey)}</strong>`, ...keys.map((colKey) => {
         const corr = rowKey === colKey ? 1 : pseudoCorrelation(rows, rowKey, colKey);
@@ -153,7 +157,7 @@ export function renderBoxplotLike(rows: EdaRecord[], activeKey: string) {
   const keys = [activeKey, "ph", "dissolved_oxygen_mg_l", "ammonia_mg_l_1"].filter(
     (key, index, arr) => arr.indexOf(key) === index,
   );
-  return `<div class="boxplot">${keys.map((key) => renderBoxRow(rows, key)).join("")}</div>`;
+  return `<p class="chart-help">Cara baca: kotak menunjukkan rentang tengah data atau IQR. Label outlier menunjukkan jumlah nilai yang berada jauh dari pola umum dataset.</p><div class="boxplot">${keys.map((key) => renderBoxRow(rows, key)).join("")}</div>`;
 }
 
 function renderBoxRow(rows: EdaRecord[], key: string) {

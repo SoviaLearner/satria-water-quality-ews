@@ -49,6 +49,9 @@ export type AppState = {
   modelInfo: ModelInfo | null;
   predictionLogs: PredictionLog[];
   edaRows: EdaRecord[];
+  edaTotalRows: number;
+  userRiskCount: number;
+  realtimeConnected: boolean;
   edaMetric: string;
   analyticsMetric: string;
   settingsTab: SettingsTab;

@@ -11,7 +11,7 @@ export async function loadProfile(session: Session | null) {
     email: user.email || null,
     full_name: user.user_metadata?.full_name || "SATRIA User",
     role: user.user_metadata?.role || "",
-    organization: user.user_metadata?.organization || "SATRIA Research",
+    organization: user.user_metadata?.organization || "",
     bio: user.user_metadata?.bio || "",
     avatar_url: null,
   };
@@ -115,12 +115,30 @@ export async function loadPredictionLogs(session: Session | null) {
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   return (data || []) as PredictionLog[];
+}
+
+export async function loadUserRiskCount(session: Session | null) {
+  const userId = session?.user.id;
+  if (!userId) return 0;
+
+  const { count } = await supabase
+    .from("prediction_results")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .ilike("predicted_suitability_tier", "%Reduced%");
+
+  return count || 0;
 }
 
 export async function loadEdaRows() {
   const { data } = await supabase.from("water_quality_clean").select("*").limit(1000);
   return (data || []) as EdaRecord[];
+}
+
+export async function loadEdaRowCount() {
+  const { count } = await supabase.from("water_quality_clean").select("*", { count: "exact", head: true });
+  return count || 0;
 }

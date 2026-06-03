@@ -27,18 +27,26 @@ function renderAuthPage(state: AppState) {
         <button class="nav-link" id="toggleModeTop" type="button">${isRegister ? "User Login" : "Create Account"}</button>
       </nav>
       <section class="auth-stage">
-        <div class="device-scene" aria-hidden="true">
-          <div class="monitor"><span class="camera"></span><div class="screen"></div><span class="stand"></span><span class="base"></span></div>
-          <div class="laptop"><span class="camera"></span><div class="screen"></div><span class="keyboard"></span></div>
-          <div class="tablet"><span class="camera"></span><div class="screen"></div><span class="home"></span></div>
-          <div class="phone"><span class="camera"></span><div class="screen"></div><span class="home"></span></div>
+        <div class="auth-info-panel">
+          <div class="auth-logo-card">
+            <img src="${HERO_LOGO_PATH}" alt="SATRIA aquaculture logo" />
+            <span>Water Quality Intelligence</span>
+          </div>
+          <span class="auth-kicker">${isRegister ? "New Operator Setup" : "Secure Operator Access"}</span>
+          <h2>${isRegister ? "Buat akun, lalu lengkapi profil operasional." : "Masuk untuk membaca status air berbasis data real."}</h2>
+          <p>SATRIA menghubungkan data kualitas air clean dataset, riwayat input user, dan model prediksi backend agar keputusan monitoring lebih cepat dan terdokumentasi.</p>
+          <div class="auth-benefits">
+            <span>Realtime Supabase logs</span>
+            <span>Profile-gated prediction workflow</span>
+            <span>EDA global dan analytics per user</span>
+          </div>
         </div>
         <form class="auth-card" id="authForm">
           <h1>${isRegister ? "CREATE ACCOUNT" : "USER LOGIN"}</h1>
-          <p class="subtitle">${isRegister ? "Daftar user baru untuk sistem SATRIA" : "Masuk ke akun SATRIA kamu"}</p>
-          ${isRegister ? renderInput("fullName", "text", "Nama lengkap") : ""}
-          ${renderInput("email", "email", "nama@email.com")}
-          ${renderInput("password", "password", "Minimal 6 karakter")}
+          <p class="subtitle">${isRegister ? "Setelah registrasi, sistem akan meminta role dan bio agar profil siap dipakai." : "Akses fitur prediksi, laporan, dan analytics milik akun kamu."}</p>
+          ${isRegister ? renderInput("fullName", "text", "Nama lengkap operator") : ""}
+          ${renderInput("email", "email", "Email aktif untuk autentikasi")}
+          ${renderInput("password", "password", "Password minimal 6 karakter")}
           <label class="remember-row"><input type="checkbox" checked /><span>Remember</span></label>
           <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Processing..." : isRegister ? "Register" : "Login"}</button>
           <div class="auth-links">
@@ -56,7 +64,7 @@ function renderInput(id: string, type: string, placeholder: string) {
   return `
     <label class="input-group" for="${id}">
       <span class="input-icon">${type === "password" ? "L" : "U"}</span>
-      <input id="${id}" name="${id}" type="${type}" placeholder="${placeholder}" required />
+      <span class="auth-field-copy"><span>${placeholder}</span><input id="${id}" name="${id}" type="${type}" required /></span>
     </label>
   `;
 }
@@ -119,6 +127,10 @@ function renderPlatformNav(state: AppState) {
 }
 
 function renderHomePage(state: AppState) {
+  const modelName = state.modelInfo?.model_name || "LightGBM";
+  const featureCount = state.modelInfo?.features?.length || predictionFields.length;
+  const dataPointValue = state.edaTotalRows || state.edaRows.length;
+  const riskLogs = state.userRiskCount;
   return `
     <section class="platform-home">
       <div class="hero-band">
@@ -137,9 +149,9 @@ function renderHomePage(state: AppState) {
         </div>
       </div>
       <div class="metric-row">
-        ${renderMetricCard("RF Accuracy", "99.7%", "+0.2% vs Last Model", "target")}
-        ${renderMetricCard("Data Points", formatNumber(state.edaRows.length || 4300), "Updated from Supabase", "data")}
-        ${renderMetricCard("Anomalies Detected", "0", "Safe Environment", "shield")}
+        ${renderMetricCard("Active Model", modelName.toUpperCase(), `${featureCount} input features ready`, "target")}
+        ${renderMetricCard("Clean Data Points", formatNumber(dataPointValue), "Exact count from Supabase", "data")}
+        ${renderMetricCard("Risk Logs", formatNumber(riskLogs), state.session ? "Reduced suitability in your logs" : "Login to track user risks", "shield")}
       </div>
       ${renderCapabilities()}
       ${renderHomeFooter()}
@@ -187,10 +199,10 @@ function renderPredictionPage(state: AppState) {
         <div><span>Prediction Classes</span><strong>${state.modelInfo?.classes?.length || 3}</strong></div>
       </div>
       <div class="prediction-layout">
-        <form class="prediction-form" id="predictionForm"><div class="parameter-grid">${predictionFields.map(([name, label]) => `<label><span>${label}</span><small>Cara format: isi angka saja, gunakan titik untuk desimal.</small><input name="${name}" type="number" step="any" required /><em class="input-error">Inputan yang dilakukan harus sesuai dengan format petunjuk di atas!</em></label>`).join("")}</div><button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><small>File harus berisi array object dengan nama field API yang sama seperti form.</small><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
+        <form class="prediction-form" id="predictionForm"><div class="parameter-grid">${predictionFields.map(([name, label, example]) => `<label><span>${label}</span><small>Cara format: isi angka saja, gunakan titik untuk desimal.</small><input name="${name}" type="number" step="any" placeholder="Contoh: ${example}" required /><em class="input-error">Inputan yang dilakukan harus sesuai dengan format petunjuk di atas!</em></label>`).join("")}</div><button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><small>File harus berisi array object dengan nama field API yang sama seperti form.</small><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
         <aside class="result-panel">${state.latestPrediction ? renderPredictionResult(state) : `<div class="empty-result"><strong>Results will appear here</strong><span>after calculation</span></div>`}</aside>
       </div>
-      <div class="prediction-bottom"><article class="how-card"><strong>How it works</strong><p>The SATRIA model analyzes 14 parameters against the cleaned aquaculture dataset and stores user prediction logs to Supabase.</p></article><article class="recent-card"><h2>Recent Tests</h2>${renderRecentList(state.predictionLogs.slice(0, 2), state)}</article></div>
+      <div class="prediction-bottom"><article class="how-card"><strong>How it works</strong><p>The SATRIA model analyzes 14 parameters against the cleaned aquaculture dataset and stores user prediction logs to Supabase.</p><p>Jika hasil sering Reduced, cek ammonia, nitrite, phosphorus, hydrogen sulfide, dan plankton count. Model mengikuti pola dataset training, bukan aturan manual sederhana.</p></article><article class="recent-card"><h2>Recent Tests</h2>${renderRecentList(state.predictionLogs.slice(0, 2), state)}</article></div>
     </section>
   `;
 }
@@ -215,7 +227,7 @@ function renderAnalyticsPage(state: AppState) {
   const userRows = state.predictionLogs.map((log) => log.input_data || {});
   const stats = computeEdaStats(userRows);
   const active = numericParameters.find((item) => item.key === state.analyticsMetric);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>User Analytics Dashboard</h1><p>Visualisasi ini memakai riwayat input dan hasil prediksi milik user aktif, bukan dataset global EDA.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh</button></div><div class="insight-strip"><div><span>User Logs</span><strong>${formatNumber(state.predictionLogs.length)}</strong></div><div><span>Avg pH</span><strong>${stats.avgPh.toFixed(2)}</strong></div><div><span>Avg Nitrite</span><strong>${stats.nitriteMean.toFixed(3)}</strong></div><div><span>Latest Status</span><strong>${escapeHtml(state.predictionLogs[0]?.predicted_suitability_tier || "N/A")}</strong></div></div><div class="analytics-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>User Water Trends: ${escapeHtml(active?.label || "Parameter")}</h2><p>Sampling dari prediction_results.input_data milik akun ini.</p></div>${renderMetricTabs(state.analyticsMetric, "analytics")}</div>${renderLineChart(userRows, state.analyticsMetric, "temperature")}</article><article class="chart-card"><h2>Status Classes</h2>${renderDonut(state.predictionLogs)}</article><article class="chart-card"><h2>${escapeHtml(active?.label || "Parameter")} Levels</h2>${renderBarChart(userRows, state.analyticsMetric)}</article><article class="chart-card"><h2>Nitrite Levels</h2>${renderBarChart(userRows, "nitrite_mg_l_1")}</article><article class="chart-card wide"><h2>User Parameter Correlation</h2><p class="chart-caption">Korelasi dihitung dari input historis user. Tambahkan lebih banyak prediksi agar pola makin stabil.</p>${renderHeatmap(userRows)}</article></div></section>`;
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>User Analytics Dashboard</h1><p>Visualisasi ini memakai riwayat input dan hasil prediksi milik user aktif, bukan dataset global EDA.</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Realtime connected" : "Realtime pending"}</span></div><button class="refresh-button" id="refreshData" type="button">Refresh</button></div><div class="insight-strip"><div><span>User Logs</span><strong>${formatNumber(state.predictionLogs.length)}</strong></div><div><span>Avg pH</span><strong>${stats.avgPh.toFixed(2)}</strong></div><div><span>Avg Nitrite</span><strong>${stats.nitriteMean.toFixed(3)}</strong></div><div><span>Latest Status</span><strong>${escapeHtml(state.predictionLogs[0]?.predicted_suitability_tier || "N/A")}</strong></div></div>${!state.predictionLogs.length ? `<div class="empty-analytics">Belum ada riwayat prediksi user. Jalankan Prediction terlebih dahulu agar grafik realtime terisi dari prediction_results.</div>` : ""}<div class="analytics-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>User Water Trends: ${escapeHtml(active?.label || "Parameter")}</h2><p>Sampling dari prediction_results.input_data milik akun ini.</p></div>${renderMetricTabs(state.analyticsMetric, "analytics")}</div>${renderLineChart(userRows, state.analyticsMetric, "temperature")}</article><article class="chart-card"><h2>Status Classes</h2>${renderDonut(state.predictionLogs)}</article><article class="chart-card"><h2>${escapeHtml(active?.label || "Parameter")} Levels</h2>${renderBarChart(userRows, state.analyticsMetric)}</article><article class="chart-card"><h2>Nitrite Levels</h2>${renderBarChart(userRows, "nitrite_mg_l_1")}</article><article class="chart-card wide"><h2>User Parameter Correlation</h2><p class="chart-caption">Korelasi dihitung dari input historis user. Tambahkan lebih banyak prediksi agar pola makin stabil.</p>${renderHeatmap(userRows)}</article></div></section>`;
 }
 
 function renderReportsPage(state: AppState) {
@@ -237,7 +249,7 @@ function filteredLogs(state: AppState) {
 function renderEdaPage(state: AppState) {
   const stats = computeEdaStats(state.edaRows);
   const active = numericParameters.find((item) => item.key === state.edaMetric);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Exploratory Data Analysis</h1><p>Realtime statistical breakdown from Supabase table water_quality_clean. Pilih parameter untuk melihat distribusi dan outlier.</p></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Sample Size</span><strong>${formatNumber(stats.rows)}</strong><p>Supabase rows loaded</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated in browser</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><div class="chart-heading"><h2>${escapeHtml(active?.label || "Parameter")} Distribution</h2>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike(state.edaRows, state.edaMetric)}</article></div></section>`;
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>Global Clean Dataset EDA</h1><p>EDA memakai keseluruhan dataset clean dari Supabase water_quality_clean. Grafik ini edukatif/global, terpisah dari Analytics user.</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Realtime dataset watcher on" : "Manual refresh available"}</span></div><button class="refresh-button" id="refreshData" type="button">Refresh EDA</button></div><div class="eda-summary-grid"><article><span>Total Clean Rows</span><strong>${formatNumber(state.edaTotalRows || stats.rows)}</strong><p>Exact Supabase count</p></article><article><span>Features Extracted</span><strong>${stats.features}</strong><p>Chemical and physical variables</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Calculated from loaded sample</p></article></div><div class="eda-grid"><article class="stats-table"><h2>Descriptive Statistics</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><div class="chart-heading"><h2>${escapeHtml(active?.label || "Parameter")} Distribution</h2>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card box-wide"><h2>Outlier Analysis</h2>${renderBoxplotLike(state.edaRows, state.edaMetric)}</article></div></section>`;
 }
 
 function renderStatsTable(state: AppState) {
@@ -256,14 +268,14 @@ function renderSettingsPage(state: AppState) {
   const fullName = getDisplayName(state);
   const email = state.profile?.email || state.session?.user.email || "";
   const role = state.profile?.role || "";
-  const organization = state.profile?.organization || "SATRIA Research";
+  const organization = state.profile?.organization || "";
   const bio = state.profile?.bio || "";
 
-  return `<section class="settings-page"><header class="profile-header"><div class="avatar">${escapeHtml(getInitials(fullName) || "S")}</div><div><h1>${escapeHtml(fullName)}</h1><p>${escapeHtml(role || "Lengkapi role profil")} & Lead Researcher</p><div class="profile-tags"><span>${role ? "Profile Ready" : "Profile Required"}</span><span>${escapeHtml(organization)}</span></div></div></header><div class="settings-layout"><aside class="settings-sidebar"><button class="${state.settingsTab === "profile" ? "active" : ""}" type="button" data-settings-tab="profile">Profile Details</button><button class="${state.settingsTab === "security" ? "active" : ""}" type="button" data-settings-tab="security">Security & Privacy</button><button id="logoutButton" class="danger" type="button">Sign Out</button><div class="note-card"><strong>Account Storage</strong><p>Lengkapi role dan bio agar fitur utama aktif. Profile tersimpan di Supabase profiles.</p></div></aside>${state.settingsTab === "security" ? renderSecurityPanel(state, fullName, email) : renderProfilePanel(state, fullName, email, role, organization, bio)}</div><footer class="settings-footer">SATRIA v0.1-STABLE | Last logged in: ${new Date().toLocaleString()}</footer></section>`;
+  return `<section class="settings-page"><header class="profile-header"><div class="avatar profile-avatar"><span>${escapeHtml(getInitials(fullName) || "S")}</span><small>${role && bio ? "READY" : "SETUP"}</small></div><div><h1>${escapeHtml(fullName)}</h1><p>${escapeHtml(role || "Lengkapi role profil")}</p><div class="profile-tags"><span>${role && bio ? "Profile Ready" : "Profile Required"}</span><span>${escapeHtml(organization || "Organization belum diisi")}</span></div></div></header><div class="settings-layout"><aside class="settings-sidebar"><button class="${state.settingsTab === "profile" ? "active" : ""}" type="button" data-settings-tab="profile">Profile Details</button><button class="${state.settingsTab === "security" ? "active" : ""}" type="button" data-settings-tab="security">Security & Privacy</button><button id="logoutButton" class="danger" type="button">Sign Out</button><div class="note-card"><strong>Account Storage</strong><p>Lengkapi role, organization, dan bio agar identitas laporan prediction jelas.</p></div></aside>${state.settingsTab === "security" ? renderSecurityPanel(state, fullName, email) : renderProfilePanel(state, fullName, email, role, organization, bio)}</div><footer class="settings-footer">SATRIA v0.1-STABLE | Last logged in: ${new Date().toLocaleString()}</footer></section>`;
 }
 
 function renderProfilePanel(state: AppState, fullName: string, email: string, role: string, organization: string, bio: string) {
-  return `<form class="profile-card" id="profileForm"><h2>Profile Configuration</h2><div class="profile-form-grid"><label><span>Full Name</span><input name="fullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Email Address</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>Role</span><input name="role" value="${escapeAttribute(role)}" required /></label><label><span>Organization</span><input name="organization" value="${escapeAttribute(organization)}" required /></label><label class="wide"><span>Bio / Research Focus</span><textarea name="bio" rows="5">${escapeHtml(bio)}</textarea></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Profile Changes"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
+  return `<form class="profile-card" id="profileForm"><h2>Profile Configuration</h2><p class="profile-form-note">Field ini sengaja tidak diisi otomatis untuk user baru. Isi sesuai peran dan institusi asli agar report lebih kredibel.</p><div class="profile-form-grid"><label><span>Full Name</span><input name="fullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Email Address</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>Role</span><input name="role" value="${escapeAttribute(role)}" required /></label><label><span>Organization</span><input name="organization" value="${escapeAttribute(organization)}" required /></label><label class="wide"><span>Bio / Research Focus</span><textarea name="bio" rows="5" required>${escapeHtml(bio)}</textarea></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Profile Changes"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
 }
 
 function renderSecurityPanel(state: AppState, fullName: string, email: string) {

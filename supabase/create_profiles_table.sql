@@ -3,7 +3,7 @@ create table if not exists public.profiles (
   email text,
   full_name text,
   role text not null default '',
-  organization text not null default 'SATRIA Research',
+  organization text not null default '',
   bio text not null default '',
   avatar_url text,
   created_at timestamptz not null default now(),
@@ -12,7 +12,7 @@ create table if not exists public.profiles (
 
 alter table public.profiles
 add column if not exists role text not null default '',
-add column if not exists organization text not null default 'SATRIA Research',
+add column if not exists organization text not null default '',
 add column if not exists bio text not null default '',
 add column if not exists avatar_url text;
 
@@ -59,7 +59,7 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data ->> 'full_name', ''),
     coalesce(new.raw_user_meta_data ->> 'role', ''),
-    coalesce(new.raw_user_meta_data ->> 'organization', 'SATRIA Research'),
+    coalesce(new.raw_user_meta_data ->> 'organization', ''),
     coalesce(new.raw_user_meta_data ->> 'bio', '')
   )
   on conflict (id) do update

@@ -53,17 +53,8 @@ class WaterQualityPredictor:
         # Ambil hasil prediksi (bisa integer atau string tergantung model)
         raw_pred = self.model.predict(df_input)[0]
         
-        # Jika model me-return string (karena PyCaret menyimpan class label aslinya)
-        if isinstance(raw_pred, str):
-            tier_name = raw_pred
-            try:
-                pred_label = self.classes.index(tier_name)
-            except ValueError:
-                pred_label = 0
-        else:
-            pred_label = int(raw_pred)
-            tier_name = self.classes[pred_label] if pred_label < len(self.classes) else "Unknown"
-
+        pred_label = int(raw_pred)
+        tier_name = self.classes[pred_label] if pred_label < len(self.classes) else "Unknown"
         # Prediksi probabilitas
         try:
             prob_scores = self.model.predict_proba(df_input)[0]

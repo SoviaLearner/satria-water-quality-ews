@@ -1,32 +1,47 @@
-logs.log
-notebooks/logs.log
-notebooks/logs.log
-mlruns/
-venv/
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+
+# Jupyter
 .ipynb_checkpoints/
+
+# Data & Models
 *.pkl
 *.csv
 *.zip
-venv/
-__pycache__/
-mlruns/
-*.pkl
-*.dll
-*.pyd
-
-
-.env
 data/processed/
 models/
-backend/model/__pycache__/
-frontend/.env
-frontend/node_modules/
-frontend/dist/
 outputs/
+backend/model/__pycache__/
 
+# Logs & Artifacts
+logs.log
+notebooks/logs.log
+mlruns/
 mlflow.db
 mlartifacts/
 /model_metadata.json
 scratch/
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node/Frontend
+node_modules/
+frontend/dist/
+
+# OS & Editor
+.vscode/
+.idea/
+.DS_Store
+*.dll
+*.pyd

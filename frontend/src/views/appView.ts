@@ -199,10 +199,22 @@ function renderPredictionPage(state: AppState) {
         <div><span>Prediction Classes</span><strong>${state.modelInfo?.classes?.length || 3}</strong></div>
       </div>
       <div class="prediction-layout">
-        <form class="prediction-form" id="predictionForm"><div class="parameter-grid">${predictionFields.map(([name, label, example]) => `<label><span>${label}</span><small>Cara format: isi angka saja, gunakan titik untuk desimal.</small><input name="${name}" type="number" step="any" placeholder="Contoh: ${example}" required /><em class="input-error">Inputan yang dilakukan harus sesuai dengan format petunjuk di atas!</em></label>`).join("")}</div><button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><small>File harus berisi array object dengan nama field API yang sama seperti form.</small><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
+        <form class="prediction-form" id="predictionForm">
+          <div class="preset-section">
+            <div class="preset-header">
+              <span class="preset-title">DEMO PRESETS (SATU-KLIK ISI OTOMATIS)</span>
+              <button type="reset" class="preset-reset-btn">↺ Reset Form</button>
+            </div>
+            <div class="preset-buttons">
+              <button type="button" class="preset-btn optimal" data-preset="optimal">✅ Air Ideal (Optimal)</button>
+              <button type="button" class="preset-btn moderate" data-preset="moderate">⚠️ Air Stress (Sedang)</button>
+              <button type="button" class="preset-btn critical" data-preset="critical">🚨 Air Bahaya (Kritis)</button>
+            </div>
+          </div>
+          <div class="parameter-grid">${predictionFields.map(([name, label, example]) => `<label><span>${label}</span><small>Cara format: isi angka saja, gunakan titik untuk desimal.</small><input name="${name}" type="number" step="any" placeholder="Contoh: ${example}" required /><em class="input-error">Inputan yang dilakukan harus sesuai dengan format petunjuk di atas!</em></label>`).join("")}</div><button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><small>File harus berisi array object dengan nama field API yang sama seperti form.</small><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
         <aside class="result-panel">${state.latestPrediction ? renderPredictionResult(state) : `<div class="empty-result"><strong>Results will appear here</strong><span>after calculation</span></div>`}</aside>
       </div>
-      <div class="prediction-bottom"><article class="how-card"><strong>How it works</strong><p>The SATRIA model analyzes 14 parameters against the cleaned aquaculture dataset and stores user prediction logs to Supabase.</p><p>Jika hasil sering Reduced, cek ammonia, nitrite, phosphorus, hydrogen sulfide, dan plankton count. Model mengikuti pola dataset training, bukan aturan manual sederhana.</p></article><article class="recent-card"><h2>Recent Tests</h2>${renderRecentList(state.predictionLogs.slice(0, 2), state)}</article></div>
+      <div class="prediction-bottom"><article class="how-card"><strong>How it works</strong><p>The SATRIA model analyzes 14 parameters against the cleaned aquaculture dataset and stores user prediction logs to Supabase.</p><p>Jika hasil sering Reduced, cek ammonia, nitrite, phosphorus, hydrogen sulfide, dan plankton count. Model mengikuti pola dataset training, bukan aturan manual sederhana.</p></article><article class="recent-card"><h2>Recent Tests</h2>${renderRecentList(state.predictionLogs.slice(0, 2))}</article></div>
     </section>
   `;
 }
@@ -282,7 +294,7 @@ function renderSecurityPanel(state: AppState, fullName: string, email: string) {
   return `<form class="profile-card" id="securityForm"><h2>Security & Privacy</h2><div class="profile-form-grid"><label><span>Username / Display Name</span><input name="securityFullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Login Email</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>New Password</span><input name="newPassword" type="password" minlength="6" placeholder="Kosongkan jika tidak diganti" /></label><label><span>Confirm Password</span><input name="confirmPassword" type="password" minlength="6" placeholder="Ulangi password baru" /></label><label class="wide privacy-check"><input type="checkbox" checked /><span>Allow SATRIA to show my name on prediction reports for this account.</span></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Security"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
 }
 
-function renderRecentList(rows: PredictionLog[], state: AppState) {
+function renderRecentList(rows: PredictionLog[]) {
   if (!rows.length) return `<p class="empty-small">Belum ada recent test.</p>`;
   return rows.map((row) => `<div class="recent-item"><div><strong>${formatDate(row.created_at)}</strong><span>${escapeHtml(row.predicted_suitability_tier)}</span></div><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(row.predicted_suitability_tier)}</span></div>`).join("");
 }

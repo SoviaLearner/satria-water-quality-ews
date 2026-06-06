@@ -129,7 +129,7 @@ timeout /t 3 /nobreak >nul
 start http://127.0.0.1:5173
 
 :: Using npx concurrently to run all services in one window and kill all on Ctrl+C
-npx concurrently -k -p "[{name}]" -n "MLflow,ML-SVC,DATA-SVC,API-GW,REACT" -c "blue,magenta,cyan,green,yellow" "venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5000 --workers 1" "cd services\ml-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001" "cd services\data-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002" "cd services\api-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000" "cd frontend && npm run dev"
+call npx concurrently -k -p "[{name}]" -n "MLflow,ML-SVC,DATA-SVC,API-GW,REACT" -c "blue,magenta,cyan,green,yellow" "venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5000 --workers 1" "cd services\ml-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001" "cd services\data-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002" "cd services\api-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000" "cd frontend && npm run dev"
 
 echo.
 echo ===================================================

@@ -1,6 +1,10 @@
 import { API_BASE_URL } from "../constants";
 import type { ModelInfo, PredictionResult } from "../types";
 
+/**
+ * Mengirim satu set data kualitas air ke API Gateway untuk mendapatkan hasil prediksi klasifikasi.
+ * Akan menyertakan header otentikasi jika token pengguna diberikan.
+ */
 export async function runPrediction(payload: Record<string, number>, token: string | null = null) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) {
@@ -20,6 +24,10 @@ export async function runPrediction(payload: Record<string, number>, token: stri
   return (await response.json()) as PredictionResult;
 }
 
+/**
+ * Mengirim banyak set data sekaligus ke API Gateway untuk prediksi secara *batch*.
+ * Mengembalikan susunan (*array*) hasil prediksi masing-masing data.
+ */
 export async function runBatchPrediction(payload: Record<string, number>[], token: string | null = null) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) {
@@ -39,6 +47,10 @@ export async function runBatchPrediction(payload: Record<string, number>[], toke
   return (await response.json()) as PredictionResult[];
 }
 
+/**
+ * Memuat informasi metadata dari model *Machine Learning* yang sedang aktif di backend
+ * (misal: versi model, fitur yang dibutuhkan, dan kelas klasifikasi).
+ */
 export async function loadModelInfo() {
   try {
     const response = await fetch(`${API_BASE_URL}/model-info`);

@@ -14,6 +14,8 @@ venv/
 
 # Data & Models
 *.pkl
+!services/ml-service/app/domains/water/artifacts/*.pkl
+!services/ml-service/app/domains/water/artifacts/*.json
 *.csv
 *.zip
 data/processed/

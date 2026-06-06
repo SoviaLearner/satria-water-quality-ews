@@ -3,6 +3,10 @@ import { supabase } from "./supabase";
 import type { EdaRecord, PredictionLog, Profile } from "../types";
 import { API_BASE_URL } from "../constants";
 
+/**
+ * Memuat data profil pengguna dari API Gateway.
+ * Membutuhkan token JWT dari sesi aktif.
+ */
 export async function loadProfile(session: Session | null) {
   const user = session?.user;
   if (!user) return null;
@@ -21,6 +25,10 @@ export async function loadProfile(session: Session | null) {
   }
 }
 
+/**
+ * Menyimpan pembaruan profil pengguna ke database via API Gateway,
+ * serta mensinkronkan metadata ke Supabase Auth.
+ */
 export async function saveProfile(session: Session, formData: FormData) {
   const updates = {
     full_name: String(formData.get("fullName") || "").trim(),
@@ -57,6 +65,10 @@ export async function saveProfile(session: Session, formData: FormData) {
   return saved;
 }
 
+/**
+ * Memperbarui nama pengguna dan kata sandi di Supabase Auth,
+ * lalu mensinkronkan perubahan nama ke database profil.
+ */
 export async function saveSecuritySettings(session: Session, formData: FormData) {
   const fullName = String(formData.get("securityFullName") || "").trim();
   const password = String(formData.get("newPassword") || "");
@@ -88,6 +100,9 @@ export async function saveSecuritySettings(session: Session, formData: FormData)
   return (await response.json()) as Profile;
 }
 
+/**
+ * Mengambil riwayat log prediksi pengguna dari API Gateway (maksimal 100 data).
+ */
 export async function loadPredictionLogs(session: Session | null) {
   if (!session) return [];
 
@@ -105,6 +120,9 @@ export async function loadPredictionLogs(session: Session | null) {
   }
 }
 
+/**
+ * Mengambil jumlah riwayat air dengan status risiko ("Reduced Suitability") milik pengguna.
+ */
 export async function loadUserRiskCount(session: Session | null) {
   if (!session) return 0;
 
@@ -123,6 +141,9 @@ export async function loadUserRiskCount(session: Session | null) {
   }
 }
 
+/**
+ * Mengambil data mentah (EDA) untuk visualisasi dashboard publik (maksimal 1000 baris).
+ */
 export async function loadEdaRows() {
   try {
     const response = await fetch(`${API_BASE_URL}/eda/rows?limit=1000`);
@@ -135,6 +156,9 @@ export async function loadEdaRows() {
   }
 }
 
+/**
+ * Mengambil total agregasi jumlah baris data EDA di sistem.
+ */
 export async function loadEdaRowCount() {
   try {
     const response = await fetch(`${API_BASE_URL}/eda/count`);

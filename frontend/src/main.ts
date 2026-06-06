@@ -1,5 +1,5 @@
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import { predictionFields } from "./constants";
+import { demoPresets, predictionFields } from "./constants";
 import { loadModelInfo, runBatchPrediction, runPrediction } from "./services/api";
 import {
   loadEdaRowCount,
@@ -36,10 +36,29 @@ function bindEvents() {
   document.querySelector("#authForm")?.addEventListener("submit", handleAuthSubmit);
   document.querySelector("#predictionForm")?.addEventListener("submit", handlePredictionSubmit);
   document.querySelector("#predictionForm")?.addEventListener("input", handlePredictionFormInput);
+  document.querySelector("#predictionForm")?.addEventListener("reset", (event) => {
+    setTimeout(() => handlePredictionFormInput(event), 0);
+  });
   document.querySelector("#bulkPredictionFile")?.addEventListener("change", handleBulkPredictionUpload);
   document.querySelector("#downloadReportsCsv")?.addEventListener("click", handleDownloadReportsCsv);
   document.querySelector("#profileForm")?.addEventListener("submit", handleProfileSave);
   document.querySelector("#securityForm")?.addEventListener("submit", handleSecuritySave);
+  document.querySelectorAll<HTMLButtonElement>(".preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const presetName = btn.dataset.preset;
+      if (!presetName || !demoPresets[presetName]) return;
+      const data = demoPresets[presetName];
+      const form = document.querySelector("#predictionForm") as HTMLFormElement;
+      if (!form) return;
+      Object.entries(data).forEach(([key, value]) => {
+        const input = form.querySelector(`input[name="${key}"]`) as HTMLInputElement;
+        if (input) {
+          input.value = String(value);
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+    });
+  });
   document.querySelectorAll("#refreshData, [data-refresh]").forEach((element) => {
     element.addEventListener("click", () => loadRealtimeData().then(render));
   });

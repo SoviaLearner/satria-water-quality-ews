@@ -75,13 +75,13 @@ echo ===================================================
 echo   Running Locally Without Docker (Single Window)
 echo ===================================================
 
-echo [1/5] Setting up Python Virtual Environment...
+echo [1/6] Setting up Python Virtual Environment...
 if not exist "venv\" (
     echo Creating virtual environment...
     python -m venv venv
 )
 
-echo [2/5] Installing Python Dependencies (this may take a minute)...
+echo [2/6] Installing Python Dependencies (this may take a minute)...
 call venv\Scripts\activate.bat
 pip install -r services/api-service/requirements.txt -q
 pip install -r services/ml-service/requirements.txt -q
@@ -89,7 +89,7 @@ pip install -r services/data-service/requirements.txt -q
 pip install mlflow uvicorn -q
 echo Dependencies installed.
 
-echo [3/5] Copying .env to microservices and frontend...
+echo [3/6] Copying .env to microservices and frontend...
 if exist ".env" (
     copy /Y .env services\api-service\.env >nul
     copy /Y .env services\ml-service\.env >nul
@@ -99,13 +99,16 @@ if exist ".env" (
     echo [WARNING] .env file not found in root directory!
 )
 
-echo [4/5] Preparing Frontend...
+echo [4/6] Preparing Frontend...
 if not exist "frontend\node_modules\" (
     echo Node modules not found. Installing frontend dependencies...
     cd frontend && npm install && cd ..
 )
 
-echo [5/5] Starting All Services in ONE Window...
+echo [5/6] Cleaning up leftover processes from previous runs...
+call :cleanup_ports
+
+echo [6/6] Starting All Services in ONE Window...
 echo.
 echo Upgrading MLflow Database Schema (if needed)...
 venv\Scripts\python.exe -m mlflow db upgrade sqlite:///mlflow.db >nul 2>&1
@@ -114,19 +117,44 @@ echo ===================================================
 echo   System will open in your browser automatically!
 echo   PRESS Ctrl+C AT ANY TIME TO STOP EVERYTHING.
 echo ===================================================
+echo.
+echo   - Frontend:        http://127.0.0.1:5173
+echo   - API Gateway:     http://127.0.0.1:8000
+echo   - ML Service:      http://127.0.0.1:8001
+echo   - Data Service:    http://127.0.0.1:8002
+echo   - MLflow Dashboard: http://127.0.0.1:5000
+echo ===================================================
 timeout /t 3 /nobreak >nul
 
 start http://127.0.0.1:5173
 
 :: Using npx concurrently to run all services in one window and kill all on Ctrl+C
-npx concurrently -k -p "[{name}]" -n "MLflow,ML-SVC,DATA-SVC,API-GW,REACT" -c "blue,magenta,cyan,green,yellow" ^
-"venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5000 --workers 1" ^
-"cd services\ml-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001" ^
-"cd services\data-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002" ^
-"cd services\api-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000" ^
-"cd frontend && npm run dev"
+npx concurrently -k -p "[{name}]" -n "MLflow,ML-SVC,DATA-SVC,API-GW,REACT" -c "blue,magenta,cyan,green,yellow" "venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5000 --workers 1" "cd services\ml-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001" "cd services\data-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002" "cd services\api-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000" "cd frontend && npm run dev"
 
+echo.
+echo ===================================================
+echo   Shutting down... Cleaning up all processes...
+echo ===================================================
+call :cleanup_ports
 echo.
 echo All services have been successfully stopped!
 pause
 exit /b 0
+
+
+:: ============================================================
+:: SUBROUTINE: Kill any process listening on our service ports
+:: This ensures no zombie/orphan processes survive between runs
+:: ============================================================
+:cleanup_ports
+for %%P in (5000 8000 8001 8002 5173) do (
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%%P ^| findstr LISTENING 2^>nul') do (
+        if not "%%a"=="0" (
+            taskkill /PID %%a /F >nul 2>&1
+            if not errorlevel 1 (
+                echo   [CLEANUP] Killed orphan process PID %%a on port %%P
+            )
+        )
+    )
+)
+goto :eof

@@ -50,14 +50,26 @@ class WaterQualityPredictor:
         ordered_data = {feat: [input_dict.get(feat)] for feat in self.features}
         df_input = pd.DataFrame(ordered_data)
         
-        # Prediksi label integer
-        pred_label = int(self.model.predict(df_input)[0])
+        # Ambil hasil prediksi (bisa integer atau string tergantung model)
+        raw_pred = self.model.predict(df_input)[0]
         
+        # Jika model me-return string (karena PyCaret menyimpan class label aslinya)
+        if isinstance(raw_pred, str):
+            tier_name = raw_pred
+            try:
+                pred_label = self.classes.index(tier_name)
+            except ValueError:
+                pred_label = 0
+        else:
+            pred_label = int(raw_pred)
+            tier_name = self.classes[pred_label] if pred_label < len(self.classes) else "Unknown"
+
         # Prediksi probabilitas
-        prob_scores = self.model.predict_proba(df_input)[0]
-        
-        # Mapping label integer kembali ke deskripsi string
-        tier_name = self.classes[pred_label] if pred_label < len(self.classes) else "Unknown"
+        try:
+            prob_scores = self.model.predict_proba(df_input)[0]
+        except AttributeError:
+            # Fallback if predict_proba is not available
+            prob_scores = [1.0 if i == pred_label else 0.0 for i in range(len(self.classes))]
         
         # Dictionary probabilitas untuk respon API
         probabilities = {

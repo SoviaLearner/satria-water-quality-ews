@@ -2815,6 +2815,23 @@ button:disabled {
   line-height: 1.65;
 }
 
+.public-feature-grid button {
+  margin-top: 22px;
+  border: 0;
+  border-radius: 10px;
+  min-height: 40px;
+  padding: 0 16px;
+  background: #155989;
+  color: #ffffff;
+  font-weight: 900;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.public-feature-grid button:hover {
+  transform: translateY(-1px);
+  background: #0fb5a5;
+}
+
 .public-about {
   display: grid;
   grid-template-columns: 1fr minmax(260px, 380px);

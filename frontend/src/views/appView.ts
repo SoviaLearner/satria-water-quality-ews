@@ -184,7 +184,7 @@ function renderPublicLandingPage(state: AppState) {
           <p>${label("publicHeroSubtitle")}</p>
         </div>
         <div class="public-feature-grid">
-          ${features.map(([title, body, icon]) => `<article><span>${icon}</span><h3>${title}</h3><p>${body}</p></article>`).join("")}
+          ${features.map(([title, body, icon]) => `<article><span>${icon}</span><h3>${title}</h3><p>${body}</p><button type="button" data-auth-mode="login">${label("login")}</button></article>`).join("")}
         </div>
       </section>
       <section class="public-about" id="about-satria">
@@ -217,7 +217,7 @@ function renderPlatformNav(state: AppState) {
   const fullName = getDisplayName(state);
   const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const links: { page: AppPage; label: string }[] = [
-    { page: "home", label: label("dashboard") },
+    { page: "home", label: label("home") },
     { page: "analytics", label: label("monitoring") },
     { page: "eda", label: label("eda") },
     { page: "prediction", label: label("predictions") },
@@ -277,29 +277,30 @@ function renderHomePage(state: AppState) {
         </div>
       </div>
       <div class="metric-row">
-        ${renderMetricCard(label("activeModel"), modelName.toUpperCase(), `${featureCount} input features ready`, "target")}
-        ${renderMetricCard(label("cleanDataPoints"), formatNumber(dataPointValue), "Exact count from Supabase", "data")}
-        ${renderMetricCard(label("riskLogs"), formatNumber(riskLogs), state.session ? "Reduced suitability in your logs" : "Login to track user risks", "shield")}
+        ${renderMetricCard(label("activeModel"), modelName.toUpperCase(), label("modelDetail").replace("14", String(featureCount)), "target")}
+        ${renderMetricCard(label("cleanDataPoints"), formatNumber(dataPointValue), label("cleanDataDetail"), "data")}
+        ${renderMetricCard(label("riskLogs"), formatNumber(riskLogs), state.session ? label("riskLogsDetail") : label("riskLoginDetail"), "shield")}
       </div>
-      ${renderCapabilities()}
+      ${renderCapabilities(state)}
       ${renderHomeFooter(state)}
     </section>
   `;
 }
 
 function renderMetricCard(label: string, value: string, detail: string, icon: string) {
-  return `<article><span class="metric-icon ${icon}">${icon.slice(0, 1).toUpperCase()}</span><p>${label}</p><strong>${value}</strong><small>${detail}</small></article>`;
+  return `<article><span class="metric-icon ${icon}">${escapeHtml(label.slice(0, 1).toUpperCase())}</span><p>${label}</p><strong>${value}</strong><small>${detail}</small></article>`;
 }
 
-function renderCapabilities() {
+function renderCapabilities(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const items = [
-    ["Predictive Modelling", "Input pond parameters manually or sync via IoT to receive instant quality classifications.", "Get Started", "prediction"],
-    ["Real-time Dashboard", "Monitor DO, pH, Nitrite, and Temperature trends across Supabase records.", "View Charts", "analytics"],
-    ["Digital Logbooks", "Manage records of water quality tests, maintenance, and system alerts.", "Manage Logs", "reports"],
-    ["Scientific EDA", "Deep dive into data distributions, correlations, and outliers.", "Dive Deep", "eda"],
+    [label("capabilityPredictionTitle"), label("capabilityPredictionBody"), label("capabilityPredictionAction"), "prediction"],
+    [label("capabilityMonitoringTitle"), label("capabilityMonitoringBody"), label("capabilityMonitoringAction"), "analytics"],
+    [label("capabilityReportsTitle"), label("capabilityReportsBody"), label("capabilityReportsAction"), "reports"],
+    [label("capabilityEdaTitle"), label("capabilityEdaBody"), label("capabilityEdaAction"), "eda"],
   ];
 
-  return `<section class="capabilities"><h2>Ecosystem Capabilities</h2><p>Explore our suite of intelligent tools designed specifically for modern industrial aquaculture.</p><div class="capability-grid">${items.map(([title, body, action, page]) => `<article><span>${title[0]}</span><h3>${title}</h3><p>${body}</p><button type="button" data-page="${page}">${action} ></button></article>`).join("")}</div></section>`;
+  return `<section class="capabilities"><h2>${label("capabilityTitle")}</h2><p>${label("capabilityDescription")}</p><div class="capability-grid">${items.map(([title, body, action, page]) => `<article><span>${escapeHtml(title[0])}</span><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p><button type="button" data-page="${page}">${escapeHtml(action)} &gt;</button></article>`).join("")}</div></section>`;
 }
 
 function renderHomeFooter(state: AppState) {

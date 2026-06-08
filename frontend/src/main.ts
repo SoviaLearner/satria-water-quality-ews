@@ -43,6 +43,12 @@ function bindEvents() {
   document.querySelector("#downloadReportsCsv")?.addEventListener("click", handleDownloadReportsCsv);
   document.querySelector("#profileForm")?.addEventListener("submit", handleProfileSave);
   document.querySelector("#securityForm")?.addEventListener("submit", handleSecuritySave);
+  document.querySelectorAll<HTMLElement>("[data-language]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.language = element.dataset.language === "en" ? "en" : "id";
+      render();
+    });
+  });
   document.querySelectorAll<HTMLButtonElement>(".preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const presetName = btn.dataset.preset;

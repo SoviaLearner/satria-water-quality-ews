@@ -1,6 +1,7 @@
 import type { AppState } from "./types";
 
 export const state: AppState = {
+  language: "id",
   authMode: "login",
   currentPage: "home",
   loading: false,

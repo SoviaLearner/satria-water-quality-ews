@@ -2,6 +2,7 @@ import { HERO_LOGO_PATH, numericParameters, predictionFields } from "../constant
 import type { AppPage, AppState, PredictionLog } from "../types";
 import { computeEdaStats } from "../utils/eda";
 import { escapeAttribute, escapeHtml, formatDate, formatNumber, getDisplayName, getInitials, statusClass } from "../utils/format";
+import { t } from "../utils/translations";
 import {
   renderBarChart,
   renderBoxplotLike,
@@ -21,16 +22,17 @@ export function renderApp(state: AppState) {
 
 function renderAuthPage(state: AppState) {
   const isRegister = state.authMode === "register";
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
 
   return `
     <main class="auth-shell">
       <nav class="topbar">
         <button class="brand auth-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
         <div class="auth-nav-actions">
-          <button class="nav-link" type="button" data-page="home">Home</button>
-          <button class="nav-link ${!isRegister ? "active" : ""}" type="button" data-auth-mode="login">Login</button>
-          <button class="nav-link ${isRegister ? "active" : ""}" type="button" data-auth-mode="register">Register</button>
-          <div class="language-switcher" aria-label="Language switcher"><button class="active" type="button" disabled>ID</button><button type="button" disabled>EN</button></div>
+          <button class="nav-link" type="button" data-page="home">${label("home")}</button>
+          <button class="nav-link ${!isRegister ? "active" : ""}" type="button" data-auth-mode="login">${label("login")}</button>
+          <button class="nav-link ${isRegister ? "active" : ""}" type="button" data-auth-mode="register">${label("register")}</button>
+          ${renderLanguageSwitcher(state)}
         </div>
       </nav>
       <section class="auth-stage">
@@ -49,22 +51,26 @@ function renderAuthPage(state: AppState) {
           </div>
         </div>
         <form class="auth-card" id="authForm">
-          <h1>${isRegister ? "CREATE ACCOUNT" : "USER LOGIN"}</h1>
-          <p class="subtitle">${isRegister ? "Setelah registrasi, sistem akan meminta role dan bio agar profil siap dipakai." : "Akses fitur prediksi, laporan, dan analytics milik akun kamu."}</p>
+          <h1>${isRegister ? label("createAccount").toUpperCase() : label("userLogin").toUpperCase()}</h1>
+          <p class="subtitle">${isRegister ? label("authRegisterSubtitle") : label("authLoginSubtitle")}</p>
           ${isRegister ? renderInput("fullName", "text", "Nama lengkap operator") : ""}
           ${renderInput("email", "email", "Email aktif untuk autentikasi")}
           ${renderInput("password", "password", "Password minimal 6 karakter")}
-          <label class="remember-row"><input type="checkbox" checked /><span>Remember</span></label>
-          <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Processing..." : isRegister ? "Register" : "Login"}</button>
+          <label class="remember-row"><input type="checkbox" checked /><span>${label("remember")}</span></label>
+          <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? label("processing") : isRegister ? label("register") : label("login")}</button>
           <div class="auth-links">
-            <button id="toggleModeBottom" type="button">${isRegister ? "Login" : "Register"}</button>
-            <button id="forgotPassword" type="button">Forgot password</button>
+            <button id="toggleModeBottom" type="button">${isRegister ? label("login") : label("register")}</button>
+            <button id="forgotPassword" type="button">${label("forgotPassword")}</button>
           </div>
           ${state.message ? `<div class="message">${state.message}</div>` : ""}
         </form>
       </section>
     </main>
   `;
+}
+
+function renderLanguageSwitcher(state: AppState) {
+  return `<div class="language-switcher" aria-label="Language switcher"><button class="${state.language === "id" ? "active" : ""}" type="button" data-language="id">ID</button><button class="${state.language === "en" ? "active" : ""}" type="button" data-language="en">EN</button></div>`;
 }
 
 function renderInput(id: string, type: string, placeholder: string) {
@@ -86,12 +92,13 @@ function renderPlatform(state: AppState) {
 }
 
 function renderPublicHomePage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   return `
     <main class="platform-shell public-shell">
       <nav class="platform-nav">
         <button class="brand platform-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
-        <div class="platform-links"><button class="active" type="button" data-page="home">Home</button><button type="button" data-auth-mode="login">Prediction</button><button type="button" data-auth-mode="login">Analytics</button><button type="button" data-auth-mode="login">Reports</button><button type="button" data-auth-mode="login">EDA</button></div>
-        <div class="public-auth-actions"><button type="button" data-auth-mode="login">Login</button><button type="button" data-auth-mode="register">Register</button></div>
+        <div class="platform-links"><button class="active" type="button" data-page="home">${label("home")}</button><button type="button" data-auth-mode="login">${label("predictions")}</button><button type="button" data-auth-mode="login">${label("monitoring")}</button><button type="button" data-auth-mode="login">${label("reports")}</button><button type="button" data-auth-mode="login">EDA</button></div>
+        <div class="public-auth-actions">${renderLanguageSwitcher(state)}<button type="button" data-auth-mode="login">${label("login")}</button><button type="button" data-auth-mode="register">${label("register")}</button></div>
       </nav>
       ${renderHomePage(state)}
     </main>
@@ -109,13 +116,14 @@ function renderCurrentPage(state: AppState) {
 
 function renderPlatformNav(state: AppState) {
   const fullName = getDisplayName(state);
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const links: { page: AppPage; label: string }[] = [
-    { page: "home", label: "Home" },
-    { page: "prediction", label: "Prediction" },
-    { page: "analytics", label: "Analytics" },
-    { page: "reports", label: "Reports" },
+    { page: "home", label: label("dashboard") },
+    { page: "prediction", label: label("predictions") },
+    { page: "analytics", label: label("monitoring") },
+    { page: "reports", label: label("reports") },
     { page: "eda", label: "EDA" },
-    { page: "settings", label: "Settings" },
+    { page: "settings", label: label("profile") },
   ];
 
   return `
@@ -123,6 +131,7 @@ function renderPlatformNav(state: AppState) {
       <button class="brand platform-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
       <div class="platform-links">${links.map((link) => `<button class="${state.currentPage === link.page ? "active" : ""}" type="button" data-page="${link.page}">${link.label}</button>`).join("")}</div>
       <div class="platform-user">
+        ${renderLanguageSwitcher(state)}
         <button class="notification-button" type="button" disabled aria-label="Notifications">!</button>
         <button class="profile-menu ${state.currentPage === "settings" ? "active" : ""}" type="button" data-page="settings">
           <span>Welcome,<strong>${escapeHtml(fullName)}</strong></span>
@@ -134,6 +143,7 @@ function renderPlatformNav(state: AppState) {
 }
 
 function renderHomePage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const modelName = state.modelInfo?.model_name || "LightGBM";
   const featureCount = state.modelInfo?.features?.length || predictionFields.length;
   const dataPointValue = state.edaTotalRows || state.edaRows.length;
@@ -143,10 +153,10 @@ function renderHomePage(state: AppState) {
       <div class="hero-band">
         <div class="hero-content">
           <span class="hero-chip">Active ML Engine v0.1 (2026)</span>
-          <h1>Analisis<br />Kualitas Air<br /><span>Akuakultur</span></h1>
+          <h1>${label("heroTitle")}</h1>
           <div class="hero-divider"></div>
-          <p>Project SATRIA provides real-time predictive insights to optimize pond health. Leveraging LightGBM classification to support 24/7 water stability and fish welfare.</p>
-          <div class="hero-actions"><button type="button" data-page="prediction">Mulai Prediksi</button><button type="button" data-page="analytics">Lihat Analitik</button></div>
+          <p>${label("heroDescription")}</p>
+          <div class="hero-actions"><button type="button" data-page="prediction">${label("startPrediction")}</button><button type="button" data-page="analytics">${label("viewAnalytics")}</button></div>
         </div>
         <div class="hero-visual">
           <div class="hero-image-frame">
@@ -156,9 +166,9 @@ function renderHomePage(state: AppState) {
         </div>
       </div>
       <div class="metric-row">
-        ${renderMetricCard("Active Model", modelName.toUpperCase(), `${featureCount} input features ready`, "target")}
-        ${renderMetricCard("Clean Data Points", formatNumber(dataPointValue), "Exact count from Supabase", "data")}
-        ${renderMetricCard("Risk Logs", formatNumber(riskLogs), state.session ? "Reduced suitability in your logs" : "Login to track user risks", "shield")}
+        ${renderMetricCard(label("activeModel"), modelName.toUpperCase(), `${featureCount} input features ready`, "target")}
+        ${renderMetricCard(label("cleanDataPoints"), formatNumber(dataPointValue), "Exact count from Supabase", "data")}
+        ${renderMetricCard(label("riskLogs"), formatNumber(riskLogs), state.session ? "Reduced suitability in your logs" : "Login to track user risks", "shield")}
       </div>
       ${renderCapabilities()}
       ${renderHomeFooter()}

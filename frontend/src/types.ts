@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 export type AuthMode = "login" | "register";
 export type AppPage = "home" | "login" | "prediction" | "analytics" | "reports" | "eda" | "settings";
 export type SettingsTab = "profile" | "security" | "privacy";
+export type Language = "id" | "en";
 
 export type Profile = {
   id: string;
@@ -39,6 +40,7 @@ export type PredictionLog = {
 export type EdaRecord = Record<string, string | number | null>;
 
 export type AppState = {
+  language: Language;
   authMode: AuthMode;
   currentPage: AppPage;
   loading: boolean;

@@ -3444,6 +3444,23 @@ button:disabled {
   height: 30px;
   min-height: 30px;
   padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: #dcebf7;
+}
+
+.auth-nav-actions .language-switcher button.active,
+.public-auth-actions .language-switcher button.active {
+  background: #18c7b4;
+  color: #ffffff;
+}
+
+.auth-nav-actions .language-switcher button:not(.active):hover,
+.public-auth-actions .language-switcher button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .public-about .hero-chip {

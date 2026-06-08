@@ -3410,3 +3410,43 @@ button:disabled {
     padding: 4px;
   }
 }
+
+/* Final public navbar fixes */
+.public-auth-actions > button {
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.public-auth-actions > button:last-child {
+  border-color: #18c7b4;
+  background: #18c7b4;
+}
+
+.auth-nav-actions,
+.public-auth-actions {
+  min-width: max-content;
+}
+
+.auth-nav-actions .language-switcher,
+.public-auth-actions .language-switcher {
+  flex: 0 0 auto;
+}
+
+.auth-nav-actions .language-switcher button,
+.public-auth-actions .language-switcher button {
+  width: 34px;
+  min-width: 34px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+}
+
+.public-about .hero-chip {
+  background: #eef4f8;
+  color: #102a43;
+}

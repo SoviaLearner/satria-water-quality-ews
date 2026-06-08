@@ -117,9 +117,9 @@ function renderPublicLandingPage(state: AppState) {
   const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const features = [
     ["Monitoring", label("featureMonitoring"), "M"],
-    [label("eda"), label("featureEda"), "E"],
+    [label("eda"), label("featureEda"), state.language === "id" ? "A" : "E"],
     [label("predictions"), label("featurePrediction"), "P"],
-    [label("reports"), label("featureReports"), "R"],
+    [label("reports"), label("featureReports"), state.language === "id" ? "L" : "R"],
   ];
 
   return `
@@ -137,10 +137,6 @@ function renderPublicLandingPage(state: AppState) {
         </div>
         <div class="public-hero-panel" aria-label="SATRIA preview">
           <img src="${HERO_LOGO_PATH}" alt="SATRIA aquaculture logo" />
-          <div>
-            <span>${label("monitoring")}</span>
-            <strong>pH | DO | Nitrite | Ammonia</strong>
-          </div>
         </div>
       </div>
       <section class="public-section">
@@ -164,7 +160,7 @@ function renderPublicLandingPage(state: AppState) {
           <div><dt>${label("githubRepository")}</dt><dd>SoviaLearner/satria-water-quality-ews</dd></div>
         </dl>
       </section>
-      ${renderHomeFooter()}
+      ${renderHomeFooter(state)}
     </section>
   `;
 }
@@ -248,7 +244,7 @@ function renderHomePage(state: AppState) {
         ${renderMetricCard(label("riskLogs"), formatNumber(riskLogs), state.session ? "Reduced suitability in your logs" : "Login to track user risks", "shield")}
       </div>
       ${renderCapabilities()}
-      ${renderHomeFooter()}
+      ${renderHomeFooter(state)}
     </section>
   `;
 }
@@ -268,16 +264,17 @@ function renderCapabilities() {
   return `<section class="capabilities"><h2>Ecosystem Capabilities</h2><p>Explore our suite of intelligent tools designed specifically for modern industrial aquaculture.</p><div class="capability-grid">${items.map(([title, body, action, page]) => `<article><span>${title[0]}</span><h3>${title}</h3><p>${body}</p><button type="button" data-page="${page}">${action} ></button></article>`).join("")}</div></section>`;
 }
 
-function renderHomeFooter() {
+function renderHomeFooter(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   return `
     <footer class="home-footer">
       <div class="footer-grid">
-        <div><div class="brand footer-brand"><span class="brand-mark">S</span><span>SATRIA</span></div><p>Leading the future of sustainable aquaculture through precision machine learning and real-time environmental monitoring.</p><div class="social-row"><button disabled>f</button><button disabled>x</button><button disabled>in</button><button disabled>gh</button></div></div>
-        <div><h4>Platform</h4><button data-page="home">Home Page</button><button data-page="prediction">ML Prediction</button><button data-page="analytics">Analytics Dashboard</button><button data-page="reports">Log Reports</button></div>
-        <div><h4>Resources</h4><button data-page="eda">Dataset EDA</button><button disabled>Documentation</button><button disabled>API Reference</button><button disabled>Community Forum</button></div>
-        <div><h4>Contact Support</h4><p>Have questions? Reach out to our technical team.</p><button disabled>support@satria.local</button><small>Response time: soon</small></div>
+        <div><div class="brand footer-brand"><span class="brand-mark">S</span><span>SATRIA</span></div><p>${label("footerDescription")}</p><div class="social-row"><button disabled>f</button><button disabled>x</button><button disabled>in</button><button disabled>gh</button></div></div>
+        <div><h4>${label("footerPlatform")}</h4><button data-page="home">${label("footerHomePage")}</button><button data-page="prediction">${label("footerMlPrediction")}</button><button data-page="analytics">${label("footerAnalyticsDashboard")}</button><button data-page="reports">${label("footerLogReports")}</button></div>
+        <div><h4>${label("footerResources")}</h4><button data-page="eda">${label("footerDatasetEda")}</button><button disabled>${label("footerDocumentation")}</button><button disabled>${label("footerApiReference")}</button><button disabled>${label("footerCommunityForum")}</button></div>
+        <div><h4>${label("footerContactSupport")}</h4><p>${label("footerContactDescription")}</p><button disabled>support@satria.local</button><small>${label("footerResponseTime")}</small></div>
       </div>
-      <div class="footer-bottom"><span>2026 Project SATRIA. All rights reserved.</span><span>Privacy Policy | Terms of Service</span></div>
+      <div class="footer-bottom"><span>${label("footerRights")}</span><span>${label("footerPolicy")}</span></div>
     </footer>
   `;
 }

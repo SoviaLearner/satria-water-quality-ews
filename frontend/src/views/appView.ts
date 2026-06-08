@@ -31,12 +31,30 @@ function renderAuthPage(state: AppState) {
         <button class="public-menu-toggle" type="button" data-menu-toggle aria-label="${label("publicNavOpen")}"><span></span><span></span><span></span></button>
         <div class="auth-nav-actions">
           <button class="nav-link" type="button" data-page="home">${label("home")}</button>
+          <button class="nav-link" type="button" data-auth-mode="login">${label("monitoring")}</button>
+          <button class="nav-link" type="button" data-auth-mode="login">${label("eda")}</button>
+          <button class="nav-link" type="button" data-auth-mode="login">${label("predictions")}</button>
+          <button class="nav-link" type="button" data-auth-mode="login">${label("reports")}</button>
           <button class="nav-link ${!isRegister ? "active" : ""}" type="button" data-auth-mode="login">${label("login")}</button>
           <button class="nav-link ${isRegister ? "active" : ""}" type="button" data-auth-mode="register">${label("register")}</button>
           ${renderLanguageSwitcher(state)}
         </div>
       </nav>
       <section class="auth-stage">
+        <div class="auth-info-panel">
+          <div class="auth-logo-card">
+            <img src="${HERO_LOGO_PATH}" alt="SATRIA aquaculture logo" />
+            <span>${label("authBrandLine")}</span>
+          </div>
+          <span class="auth-kicker">${isRegister ? label("authRegisterKicker") : label("authLoginKicker")}</span>
+          <h2>${isRegister ? label("authRegisterPanelTitle") : label("authLoginPanelTitle")}</h2>
+          <p>${label("authPanelDescription")}</p>
+          <div class="auth-benefits">
+            <span>${label("authBenefitRealtime")}</span>
+            <span>${label("authBenefitProfile")}</span>
+            <span>${label("authBenefitEda")}</span>
+          </div>
+        </div>
         <form class="auth-card" id="authForm">
           <div class="auth-card-logo">
             <img src="${HERO_LOGO_PATH}" alt="SATRIA logo" />

@@ -107,6 +107,11 @@ function bindEvents() {
     element.addEventListener("click", () => {
       state.currentPage = element.dataset.page as AppPage;
       state.message = "";
+      if (!state.session && state.currentPage === "home") {
+        state.authMode = "login";
+        render();
+        return;
+      }
       if (!state.session && state.currentPage !== "home") {
         state.authMode = "login";
         render();

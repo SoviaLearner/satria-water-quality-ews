@@ -2386,6 +2386,9 @@ button:disabled {
 .auth-nav-actions,
 .public-auth-actions,
 .public-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   justify-content: flex-end;
 }
 
@@ -2445,12 +2448,14 @@ button:disabled {
   min-height: calc(100vh - var(--auth-nav-height));
   display: grid;
   place-items: center;
-  grid-template-columns: 1fr;
-  padding: clamp(28px, 6vh, 72px) 20px;
+  grid-template-columns: minmax(360px, 1fr) minmax(360px, 470px);
+  gap: clamp(38px, 6vw, 96px);
+  padding: clamp(34px, 7vh, 78px) clamp(22px, 8vw, 120px);
 }
 
 .auth-card {
   width: min(100%, 470px);
+  justify-self: center;
   padding: clamp(30px, 4vw, 44px);
   border: 1px solid rgba(178, 198, 215, 0.72);
   border-radius: 24px;
@@ -2595,6 +2600,7 @@ button:disabled {
 .public-shell .platform-nav {
   grid-template-columns: auto 1fr auto;
   gap: clamp(16px, 3vw, 34px);
+  min-height: var(--platform-nav-height);
 }
 
 .public-shell .platform-links {
@@ -2611,16 +2617,16 @@ button:disabled {
 }
 
 .public-landing {
-  padding-top: var(--platform-nav-height);
+  padding-top: 0;
 }
 
 .public-hero {
-  min-height: calc(100vh - var(--platform-nav-height));
+  min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 480px);
   align-items: center;
   gap: clamp(40px, 6vw, 96px);
-  padding: clamp(56px, 8vw, 112px) clamp(22px, 8vw, 130px);
+  padding: calc(var(--platform-nav-height) + clamp(42px, 7vw, 96px)) clamp(22px, 8vw, 130px) clamp(56px, 8vw, 112px);
   color: #ffffff;
   background:
     linear-gradient(rgba(13, 69, 111, 0.82), rgba(13, 69, 111, 0.86)),
@@ -2947,6 +2953,22 @@ button:disabled {
 }
 
 @media (max-width: 1024px) {
+  .auth-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-info-panel {
+    text-align: center;
+  }
+
+  .auth-logo-card {
+    margin-inline: auto;
+  }
+
+  .auth-info-panel p {
+    margin-inline: auto;
+  }
+
   .public-hero,
   .public-about {
     grid-template-columns: 1fr;
@@ -3016,6 +3038,10 @@ button:disabled {
     padding: 24px 14px;
   }
 
+  .auth-info-panel {
+    display: none;
+  }
+
   .auth-card {
     padding: 28px 20px;
     border-radius: 20px;
@@ -3028,7 +3054,7 @@ button:disabled {
 
   .public-hero {
     min-height: auto;
-    padding: 48px 18px 58px;
+    padding: calc(var(--platform-nav-height) + 30px) 18px 58px;
   }
 
   .public-hero h1 {

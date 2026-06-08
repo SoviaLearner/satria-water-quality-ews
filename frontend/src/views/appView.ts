@@ -16,8 +16,47 @@ import {
 } from "./charts";
 
 export function renderApp(state: AppState) {
+  if (state.currentPage === "reset-password") return renderResetPasswordPage(state);
   if (!state.session && state.currentPage !== "login") return renderPublicHomePage(state);
   return state.session ? renderPlatform(state) : renderAuthPage(state);
+}
+
+function renderResetPasswordPage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
+  return `
+    <main class="auth-shell">
+      <nav class="topbar">
+        <button class="brand auth-brand" type="button" data-page="home"><span class="brand-mark">S</span><span>SATRIA</span></button>
+        <div class="auth-nav-actions">
+          <button class="nav-link" type="button" data-page="home">${label("home")}</button>
+          ${renderLanguageSwitcher(state)}
+        </div>
+      </nav>
+      <section class="auth-stage reset-stage">
+        <div class="auth-info-panel">
+          <div class="auth-logo-card">
+            <img src="${HERO_LOGO_PATH}" alt="SATRIA aquaculture logo" />
+            <span>${label("authBrandLine")}</span>
+          </div>
+          <span class="auth-kicker">${state.language === "en" ? "Password Recovery" : "Pemulihan Password"}</span>
+          <h2>${state.language === "en" ? "Create a new password for your SATRIA account." : "Buat password baru untuk akun SATRIA kamu."}</h2>
+          <p>${state.language === "en" ? "This page opens from the Supabase recovery email and does not require profile completion first." : "Halaman ini terbuka dari email recovery Supabase dan tidak perlu melengkapi profil terlebih dahulu."}</p>
+        </div>
+        <form class="auth-card" id="resetPasswordForm">
+          <div class="auth-card-logo">
+            <img src="${HERO_LOGO_PATH}" alt="SATRIA logo" />
+            <span>SATRIA</span>
+          </div>
+          <h1>${state.language === "en" ? "Reset Password" : "Reset Password"}</h1>
+          <p class="subtitle">${state.language === "en" ? "Enter and confirm your new password." : "Masukkan dan konfirmasi password baru kamu."}</p>
+          ${renderInput("newPassword", "password", state.language === "en" ? "New Password" : "Password Baru", state.language === "en" ? "Minimum 6 characters" : "Minimal 6 karakter")}
+          ${renderInput("confirmPassword", "password", state.language === "en" ? "Confirm Password" : "Konfirmasi Password", state.language === "en" ? "Repeat new password" : "Ulangi password baru")}
+          <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? label("processing") : state.language === "en" ? "Save New Password" : "Simpan Password Baru"}</button>
+          ${state.message ? `<div class="message">${state.message}</div>` : ""}
+        </form>
+      </section>
+    </main>
+  `;
 }
 
 function renderAuthPage(state: AppState) {
@@ -193,7 +232,6 @@ function renderPlatformNav(state: AppState) {
       <div class="platform-links">${links.map((link) => `<button class="${state.currentPage === link.page ? "active" : ""}" type="button" data-page="${link.page}">${link.label}</button>`).join("")}</div>
       <div class="platform-user">
         ${renderLanguageSwitcher(state)}
-        <button class="notification-button" type="button" disabled aria-label="Notifications">Alert</button>
         <button class="profile-menu ${state.currentPage === "settings" ? "active" : ""}" type="button" data-page="settings">
           <span>Welcome,<strong>${escapeHtml(fullName)}</strong></span>
           <span class="profile-dot">${escapeHtml(getInitials(fullName) || "S")}</span>

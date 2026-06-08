@@ -46,7 +46,7 @@ const dictionary = {
     authEmail: "Email",
     authPassword: "Password",
     authConfirmPassword: "Konfirmasi Password",
-    authFullNamePlaceholder: "Contoh: Sovia Wahyuningtyas",
+    authFullNamePlaceholder: "Contoh: Bagus Andika",
     authEmailPlaceholder: "contoh@email.com",
     authPasswordPlaceholder: "Minimal 6 karakter",
     authConfirmPasswordPlaceholder: "Ulangi password",

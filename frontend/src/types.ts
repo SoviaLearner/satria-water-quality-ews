@@ -1,7 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 
 export type AuthMode = "login" | "register";
-export type AppPage = "home" | "login" | "prediction" | "analytics" | "reports" | "eda" | "settings";
+export type AppPage = "home" | "login" | "prediction" | "analytics" | "reports" | "eda" | "settings" | "reset-password";
 export type SettingsTab = "profile" | "security" | "privacy";
 export type Language = "id" | "en";
 

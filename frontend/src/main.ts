@@ -35,6 +35,7 @@ function bindEvents() {
   document.querySelector("#logoutButton")?.addEventListener("click", handleLogout);
   document.querySelector("#navLogoutButton")?.addEventListener("click", handleLogout);
   document.querySelector("#authForm")?.addEventListener("submit", handleAuthSubmit);
+  document.querySelector("#resetPasswordForm")?.addEventListener("submit", handleResetPasswordSubmit);
   document.querySelector("#predictionForm")?.addEventListener("submit", handlePredictionSubmit);
   document.querySelector("#predictionForm")?.addEventListener("input", handlePredictionFormInput);
   document.querySelector("#predictionForm")?.addEventListener("reset", (event) => {
@@ -117,7 +118,7 @@ function bindEvents() {
         render();
         return;
       }
-      if (state.session && !isProfileComplete() && !["home", "settings"].includes(state.currentPage)) {
+      if (state.session && !isProfileComplete() && !["home", "settings", "reset-password"].includes(state.currentPage)) {
         state.currentPage = "settings";
         state.settingsTab = "profile";
         state.message = "Lengkapi role dan bio profil sebelum mengakses fitur utama.";
@@ -312,7 +313,8 @@ async function handleForgotPassword() {
     return;
   }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  const redirectTo = `${window.location.origin}${window.location.pathname}?reset-password=1`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) {
     if (error.message.toLowerCase().includes("rate limit")) {
       state.message = "Limit email tercapai (maks 3/jam dari Supabase). Tunggu beberapa saat atau gunakan custom SMTP.";
@@ -322,6 +324,45 @@ async function handleForgotPassword() {
   } else {
     state.message = "Link reset password dikirim ke email kamu.";
   }
+  render();
+}
+
+async function handleResetPasswordSubmit(event: Event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget as HTMLFormElement);
+  const password = String(formData.get("newPassword") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!password || password.length < 6) {
+    state.message = "Password minimal 6 karakter.";
+    render();
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    state.message = "Konfirmasi password tidak sama.";
+    render();
+    return;
+  }
+
+  state.loading = true;
+  state.message = "";
+  render();
+
+  const { error } = await supabase.auth.updateUser({ password });
+  state.loading = false;
+
+  if (error) {
+    state.message = error.message;
+    render();
+    return;
+  }
+
+  state.message = "Password berhasil diperbarui. Silakan login kembali.";
+  await supabase.auth.signOut();
+  state.session = null;
+  state.currentPage = "login";
+  state.authMode = "login";
   render();
 }
 
@@ -460,12 +501,26 @@ function setupRealtimeSubscriptions() {
     });
 }
 
+function isRecoveryRoute() {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return query.get("reset-password") === "1" || hash.get("type") === "recovery";
+}
+
 supabase.auth.getSession().then(({ data }) => {
   state.session = data.session;
+  if (isRecoveryRoute()) {
+    state.currentPage = "reset-password";
+    window.history.replaceState({}, "", window.location.pathname);
+  }
   refreshUserData().then(render);
 });
 
-supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession: Session | null) => {
+supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession: Session | null) => {
   state.session = nextSession;
+  if (event === "PASSWORD_RECOVERY") {
+    state.currentPage = "reset-password";
+    window.history.replaceState({}, "", window.location.pathname);
+  }
   refreshUserData().then(render);
 });

@@ -92,6 +92,10 @@ function bindEvents() {
     state.reportPage = 1;
     render();
   });
+  document.querySelector("[data-report-search]")?.addEventListener("click", () => {
+    state.reportPage = 1;
+    render();
+  });
   document.querySelectorAll<HTMLElement>("[data-report-page]").forEach((element) => {
     element.addEventListener("click", () => {
       const direction = element.dataset.reportPage;
@@ -135,7 +139,7 @@ function bindEvents() {
       if (state.session && !isProfileComplete() && !["home", "settings", "reset-password"].includes(state.currentPage)) {
         state.currentPage = "settings";
         state.settingsTab = "profile";
-        state.message = "Lengkapi role dan bio profil sebelum mengakses fitur utama.";
+        state.message = label("profileRequiredMessage");
         render();
         return;
       }
@@ -214,8 +218,7 @@ async function handleAuthSubmit(event: Event) {
     state.temporaryPasswordReset = true;
     state.currentPage = "settings";
     state.settingsTab = "security";
-    state.message =
-      "Anda login menggunakan password sementara hasil reset. Demi keamanan akun, segera ubah password Anda melalui form Change Password di bawah ini.";
+    state.message = label("temporaryPasswordNotice");
   }
   render();
 }
@@ -390,13 +393,13 @@ async function handleResetPasswordSubmit(event: Event) {
   const confirmPassword = String(formData.get("confirmPassword") || "");
 
   if (!password || password.length < 6) {
-    state.message = "Password minimal 6 karakter.";
+    state.message = label("passwordMinMessage");
     render();
     return;
   }
 
   if (password !== confirmPassword) {
-    state.message = "Konfirmasi password tidak sama.";
+    state.message = label("passwordConfirmMismatchMessage");
     render();
     return;
   }
@@ -431,7 +434,7 @@ async function handleProfileSave(event: Event) {
   const organization = String(formData.get("organization") || "").trim();
   const bio = String(formData.get("bio") || "").trim();
   if (!role || !organization || !bio) {
-    state.message = "Role, Organization, dan Bio wajib diisi sebelum mengakses fitur utama.";
+    state.message = label("profileRequiredMessage");
     render();
     return;
   }
@@ -442,12 +445,12 @@ async function handleProfileSave(event: Event) {
 
   try {
     state.profile = await saveProfile(state.session, formData);
-    state.message = "Profile berhasil disimpan ke Supabase.";
+    state.message = label("profileSavedMessage");
     if (isProfileComplete()) {
       state.currentPage = "prediction";
     }
   } catch (error) {
-    state.message = error instanceof Error ? error.message : "Profile gagal disimpan.";
+    state.message = error instanceof Error ? error.message : label("profileSaveFailedMessage");
   }
 
   state.loading = false;
@@ -465,15 +468,15 @@ async function handleSecuritySave(event: Event) {
   render();
 
   try {
-    const profile = await saveSecuritySettings(state.session, formData);
+    const profile = await saveSecuritySettings(state.session, formData, state.language);
     state.profile = profile || (await loadProfile(state.session));
     if (password && state.temporaryPasswordReset) {
       localStorage.removeItem(TEMPORARY_RESET_EMAIL_KEY);
       state.temporaryPasswordReset = false;
     }
-    state.message = "Security & Privacy berhasil diperbarui.";
+    state.message = label("securitySavedMessage");
   } catch (error) {
-    state.message = error instanceof Error ? error.message : "Security & Privacy gagal disimpan.";
+    state.message = error instanceof Error ? error.message : label("securitySaveFailedMessage");
   }
 
   state.loading = false;
@@ -507,12 +510,11 @@ async function refreshUserData() {
   if (state.session && state.temporaryPasswordReset) {
     state.currentPage = "settings";
     state.settingsTab = "security";
-    state.message =
-      "Anda login menggunakan password sementara hasil reset. Demi keamanan akun, segera ubah password Anda melalui form Change Password di bawah ini.";
+    state.message = label("temporaryPasswordNotice");
   } else if (state.session && !isProfileComplete()) {
     state.currentPage = "settings";
     state.settingsTab = "profile";
-    state.message = "Lengkapi role dan bio profil sebelum menggunakan fitur utama.";
+    state.message = label("profileRequiredMessage");
   }
 }
 

@@ -161,7 +161,8 @@ export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1", langua
         .map(
           (value, index) => {
             const height = 16 + ((value - min) / range) * 76;
-            return `<button type="button" title="${escapeHtml(label(language, "sample"))} ${index + 1}: ${formatMetricValue(value, meta?.unit)}" style="height:${height}%;--bar-delay:${index * 55}ms"><span>${formatMetricValue(value, meta?.unit)}</span></button>`;
+            const showValue = nums.length <= 4 || index === 0 || index === nums.length - 1 || value === max;
+            return `<button type="button" title="${escapeHtml(label(language, "sample"))} ${index + 1}: ${formatMetricValue(value, meta?.unit)}" style="height:${height}%;--bar-delay:${index * 55}ms">${showValue ? `<span>${formatMetricValue(value, meta?.unit)}</span>` : ""}</button>`;
           },
         )
         .join("")}

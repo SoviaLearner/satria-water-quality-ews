@@ -155,7 +155,7 @@ function renderPublicHomePage(state: AppState) {
 function renderPublicLandingPage(state: AppState) {
   const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const features = [
-    ["Monitoring", label("featureMonitoring"), "M"],
+    [label("monitoring"), label("featureMonitoring"), state.language === "id" ? "A" : "A"],
     [label("eda"), label("featureEda"), state.language === "id" ? "A" : "E"],
     [label("predictions"), label("featurePrediction"), "P"],
     [label("reports"), label("featureReports"), state.language === "id" ? "L" : "R"],
@@ -447,7 +447,7 @@ function renderReportsPage(state: AppState) {
   const pageRows = filtered.slice(start, start + pageSize);
   const interpretedStatus = translateStatus(latestStatus, state.language);
   const interpretation = label("finalInterpretationBody").replace("{status}", interpretedStatus);
-  return `<section class="work-page reports-page"><div class="page-heading row-heading"><div><h1>${label("reportsTitle")}</h1><p>${label("reportsSubtitle")}</p></div><button class="refresh-button" id="refreshData" type="button">${label("refreshLogs")}</button></div><div class="report-summary-grid report-summary-grid-compact"><article><span>${label("monitoringSummary")}</span><strong>${formatNumber(state.predictionLogs.length)}</strong><p>${label("monitoringSummaryBody")}</p></article><article><span>${label("predictionSummary")}</span><strong>${escapeHtml(interpretedStatus)}</strong><p>${label("predictionSummaryBody")}</p></article></div><article class="final-interpretation"><h2>${label("finalInterpretation")}</h2><p>${escapeHtml(interpretation)}</p><p class="chart-caption">${label("pdfFutureNote")}</p></article><div class="report-toolbar"><input id="reportSearch" placeholder="${label("reportSearchPlaceholder")}" value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-refresh>${label("syncSupabase")}</button><button type="button" id="downloadReportsCsv">${label("downloadCsv")}</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>${label("tableTimestamp")}</th><th>${label("tableUser")}</th><th>${label("tableParameters")}</th><th>${label("tableStatus")}</th><th>${label("tableActions")}</th></tr></thead><tbody>${renderReportRows(state, pageRows)}</tbody></table></div>${renderReportPagination(state, filtered.length, currentPage, totalPages, pageRows.length)}${state.message ? `<div class="message">${escapeHtml(state.message)}</div>` : ""}</section>`;
+  return `<section class="work-page reports-page"><div class="page-heading row-heading"><div><h1>${label("reportsTitle")}</h1><p>${label("reportsSubtitle")}</p></div><button class="refresh-button" id="refreshData" type="button">${label("refreshLogs")}</button></div><div class="report-summary-grid report-summary-grid-compact"><article><span>${label("monitoringSummary")}</span><strong>${formatNumber(state.predictionLogs.length)}</strong><p>${label("monitoringSummaryBody")}</p></article><article><span>${label("predictionSummary")}</span><strong>${escapeHtml(interpretedStatus)}</strong><p>${label("predictionSummaryBody")}</p></article></div><article class="final-interpretation"><h2>${label("finalInterpretation")}</h2><p>${escapeHtml(interpretation)}</p><p class="chart-caption">${label("pdfFutureNote")}</p></article><div class="report-toolbar"><div class="report-search-field"><input id="reportSearch" placeholder="${label("reportSearchPlaceholder")}" value="${escapeAttribute(state.reportSearch)}" /><button type="button" data-report-search aria-label="${label("reportSearchButton")}">⌕</button></div><button type="button" data-refresh>${label("syncSupabase")}</button><button type="button" id="downloadReportsCsv">${label("downloadCsv")}</button></div><div class="table-wrap"><table class="log-table"><thead><tr><th>${label("tableTimestamp")}</th><th>${label("tableUser")}</th><th>${label("tableParameters")}</th><th>${label("tableStatus")}</th><th>${label("tableActions")}</th></tr></thead><tbody>${renderReportRows(state, pageRows)}</tbody></table></div>${renderReportPagination(state, filtered.length, currentPage, totalPages, pageRows.length)}${state.message ? `<div class="message">${escapeHtml(state.message)}</div>` : ""}</section>`;
 }
 
 function renderReportRows(state: AppState, rows: PredictionLog[]) {
@@ -465,12 +465,36 @@ function renderReportPagination(state: AppState, filteredCount: number, currentP
 function filteredLogs(state: AppState) {
   const term = state.reportSearch.trim().toLowerCase();
   if (!term) return state.predictionLogs;
-  const user = `${state.profile?.full_name || ""} ${state.session?.user.email || ""}`.toLowerCase();
-  return state.predictionLogs.filter((row) => {
-    const date = `${row.created_at || ""} ${formatDate(row.created_at)}`.toLowerCase();
-    const status = `${row.predicted_suitability_tier} ${translateStatus(row.predicted_suitability_tier, state.language)}`.toLowerCase();
-    return status.includes(term) || user.includes(term) || date.includes(term);
-  });
+  return state.predictionLogs.filter((row) => reportDateMatches(row.created_at, term));
+}
+
+function reportDateMatches(value: string, rawTerm: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const term = rawTerm.trim().toLowerCase().replace(/\s+/g, " ");
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const slash = `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}`;
+  const looseSlash = `${day}/${month}`;
+  const monthNames = [
+    ["jan", "januari", "january"],
+    ["feb", "februari", "february"],
+    ["mar", "maret", "march"],
+    ["apr", "april"],
+    ["mei", "may"],
+    ["jun", "juni", "june"],
+    ["jul", "juli", "july"],
+    ["agu", "agustus", "aug", "august"],
+    ["sep", "september"],
+    ["okt", "oktober", "oct", "october"],
+    ["nov", "november"],
+    ["des", "desember", "dec", "december"],
+  ];
+  const monthTerms = monthNames[month - 1].flatMap((name) => [`${day} ${name}`, `${String(day).padStart(2, "0")} ${name}`]);
+  return iso.includes(term) || slash.includes(term) || looseSlash === term || monthTerms.some((item) => item === term);
 }
 
 function renderEdaPage(state: AppState) {
@@ -493,24 +517,27 @@ function renderStatsTable(state: AppState) {
 }
 
 function renderSettingsPage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const fullName = getDisplayName(state);
   const email = state.profile?.email || state.session?.user.email || "";
   const role = state.profile?.role || "";
   const organization = state.profile?.organization || "";
   const bio = state.profile?.bio || "";
 
-  return `<section class="settings-page"><header class="profile-header"><div class="avatar profile-avatar"><span>${escapeHtml(getInitials(fullName) || "S")}</span><small>${role && bio ? "READY" : "SETUP"}</small></div><div><h1>${escapeHtml(fullName)}</h1><p>${escapeHtml(role || "Lengkapi role profil")}</p><div class="profile-tags"><span>${role && bio ? "Profile Ready" : "Profile Required"}</span><span>${escapeHtml(organization || "Organization belum diisi")}</span></div></div></header><div class="settings-layout"><aside class="settings-sidebar"><button class="${state.settingsTab === "profile" ? "active" : ""}" type="button" data-settings-tab="profile">Profile Details</button><button class="${state.settingsTab === "security" ? "active" : ""}" type="button" data-settings-tab="security">Security & Privacy</button><button id="logoutButton" class="danger" type="button">Sign Out</button><div class="note-card"><strong>Account Storage</strong><p>Lengkapi role, organization, dan bio agar identitas laporan prediction jelas.</p></div></aside>${state.settingsTab === "security" ? renderSecurityPanel(state, fullName, email) : renderProfilePanel(state, fullName, email, role, organization, bio)}</div><footer class="settings-footer">SATRIA v0.1-STABLE | Last logged in: ${new Date().toLocaleString()}</footer></section>`;
+  return `<section class="settings-page"><header class="profile-header"><div class="avatar profile-avatar"><span>${escapeHtml(getInitials(fullName) || "S")}</span><small>${role && bio ? label("profileReadyShort") : label("profileSetup")}</small></div><div><h1>${escapeHtml(fullName)}</h1><p>${escapeHtml(role || label("completeProfileRole"))}</p><div class="profile-tags"><span>${role && bio ? label("profileReady") : label("profileRequired")}</span><span>${escapeHtml(organization || label("organizationEmpty"))}</span></div></div></header><div class="settings-layout"><aside class="settings-sidebar"><button class="${state.settingsTab === "profile" ? "active" : ""}" type="button" data-settings-tab="profile">${label("profileDetails")}</button><button class="${state.settingsTab === "security" ? "active" : ""}" type="button" data-settings-tab="security">${label("securityPrivacy")}</button><button id="logoutButton" class="danger" type="button">${label("signOut")}</button><div class="note-card"><strong>${label("accountStorage")}</strong><p>${label("accountStorageNote")}</p></div></aside>${state.settingsTab === "security" ? renderSecurityPanel(state, fullName, email) : renderProfilePanel(state, fullName, email, role, organization, bio)}</div><footer class="settings-footer">SATRIA v0.1-STABLE | ${label("lastLoggedIn")}: ${new Date().toLocaleString()}</footer></section>`;
 }
 
 function renderProfilePanel(state: AppState, fullName: string, email: string, role: string, organization: string, bio: string) {
-  return `<form class="profile-card" id="profileForm"><h2>Profile Configuration</h2><p class="profile-form-note">Field ini sengaja tidak diisi otomatis untuk user baru. Isi sesuai peran dan institusi asli agar report lebih kredibel.</p><div class="profile-form-grid"><label><span>Full Name</span><input name="fullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Email Address</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>Role</span><input name="role" value="${escapeAttribute(role)}" required /></label><label><span>Organization</span><input name="organization" value="${escapeAttribute(organization)}" required /></label><label class="wide"><span>Bio / Research Focus</span><textarea name="bio" rows="5" required>${escapeHtml(bio)}</textarea></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Profile Changes"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
+  return `<form class="profile-card" id="profileForm"><h2>${label("profileConfiguration")}</h2><p class="profile-form-note">${label("profileFormNote")}</p><div class="profile-form-grid"><label><span>${label("fullName")}</span><input name="fullName" value="${escapeAttribute(fullName)}" required /></label><label><span>${label("emailAddress")}</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>${label("roleLabel")}</span><input name="role" value="${escapeAttribute(role)}" required /></label><label><span>${label("organizationLabel")}</span><input name="organization" value="${escapeAttribute(organization)}" required /></label><label class="wide"><span>${label("bioResearchFocus")}</span><textarea name="bio" rows="5" required>${escapeHtml(bio)}</textarea></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? label("saving") : label("saveProfileChanges")}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
 }
 
 function renderSecurityPanel(state: AppState, fullName: string, email: string) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const temporaryNotice = state.temporaryPasswordReset
-    ? `<div class="message settings-message password-reset-notice">Anda login menggunakan password sementara hasil reset. Demi keamanan akun, segera ubah password Anda melalui form Change Password di bawah ini.</div>`
+    ? `<div class="message settings-message password-reset-notice">${label("temporaryPasswordNotice")}</div>`
     : "";
-  return `<form class="profile-card" id="securityForm"><h2>Security & Privacy</h2>${temporaryNotice}<div class="profile-form-grid"><label><span>Username / Display Name</span><input name="securityFullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Login Email</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>New Password</span><input name="newPassword" type="password" minlength="6" placeholder="Kosongkan jika tidak diganti" /></label><label><span>Confirm Password</span><input name="confirmPassword" type="password" minlength="6" placeholder="Ulangi password baru" /></label><label class="wide privacy-check"><input type="checkbox" checked /><span>Allow SATRIA to show my name on prediction reports for this account.</span></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Security"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
+  return `<form class="profile-card" id="securityForm"><h2>${label("securityPrivacy")}</h2>${temporaryNotice}<div class="profile-form-grid"><label><span>${label("usernameDisplayName")}</span><input name="securityFullName" value="${escapeAttribute(fullName)}" required /></label><label><span>${label("loginEmail")}</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>${label("newPassword")}</span><input name="newPassword" type="password" minlength="6" placeholder="${escapeAttribute(label("emptyPasswordPlaceholder"))}" /></label><label><span>${label("confirmPassword")}</span><input name="confirmPassword" type="password" minlength="6" placeholder="${escapeAttribute(label("repeatNewPasswordPlaceholder"))}" /></label><label class="wide privacy-check"><input type="checkbox" checked /><span>${label("allowNameReports")}</span></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? label("saving") : label("changePassword")}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
 }
 
 function renderRecentList(rows: PredictionLog[], state: AppState) {

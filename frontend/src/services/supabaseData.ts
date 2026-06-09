@@ -1,7 +1,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import type { EdaRecord, PredictionLog, Profile } from "../types";
+import type { EdaRecord, Language, PredictionLog, Profile } from "../types";
 import { API_BASE_URL } from "../constants";
+import { t } from "../utils/translations";
 
 /**
  * Memuat data profil pengguna dari API Gateway.
@@ -69,14 +70,15 @@ export async function saveProfile(session: Session, formData: FormData) {
  * Memperbarui nama pengguna dan kata sandi di Supabase Auth,
  * lalu mensinkronkan perubahan nama ke database profil.
  */
-export async function saveSecuritySettings(session: Session, formData: FormData) {
+export async function saveSecuritySettings(session: Session, formData: FormData, language: Language = "id") {
+  const label = (key: Parameters<typeof t>[1]) => t(language, key);
   const fullName = String(formData.get("securityFullName") || "").trim();
   const password = String(formData.get("newPassword") || "");
   const confirmPassword = String(formData.get("confirmPassword") || "");
 
-  if (!fullName) throw new Error("Username / nama user wajib diisi.");
-  if (password && password.length < 6) throw new Error("Password minimal 6 karakter.");
-  if (password !== confirmPassword) throw new Error("Konfirmasi password tidak sama.");
+  if (!fullName) throw new Error(label("usernameRequiredMessage"));
+  if (password && password.length < 6) throw new Error(label("passwordMinMessage"));
+  if (password !== confirmPassword) throw new Error(label("passwordConfirmMismatchMessage"));
 
   const authUpdates: { password?: string; data: { full_name: string } } = { data: { full_name: fullName } };
   if (password) authUpdates.password = password;

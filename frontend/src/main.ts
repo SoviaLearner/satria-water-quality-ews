@@ -136,7 +136,7 @@ function bindEvents() {
         render();
         return;
       }
-      if (state.session && !isProfileComplete() && !["home", "settings", "reset-password"].includes(state.currentPage)) {
+      if (state.session && !isProfileComplete() && !["home", "settings", "reset-password", "eda"].includes(state.currentPage)) {
         state.currentPage = "settings";
         state.settingsTab = "profile";
         state.message = label("profileRequiredMessage");
@@ -156,6 +156,12 @@ function bindEvents() {
       state.currentPage = "login";
       state.message = "";
       render();
+    });
+  });
+  document.querySelectorAll<HTMLButtonElement>(".btn-view-desc").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const desc = btn.dataset.desc || "";
+      showDescModal(desc);
     });
   });
 }
@@ -571,6 +577,53 @@ function setupRealtimeSubscriptions() {
       state.realtimeConnected = status === "SUBSCRIBED";
       render();
     });
+}
+
+function showDescModal(desc: string) {
+  const existing = document.querySelector(".satria-modal-overlay");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "satria-modal-overlay";
+  
+  const isEnglish = state.language === "en";
+  const escapeHtml = (str: string) => {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+  
+  overlay.innerHTML = `
+    <div class="satria-modal-card">
+      <div class="satria-modal-header">
+        <h3>${isEnglish ? "Aquaculture Suitability Description" : "Deskripsi Kesesuaian Budidaya"}</h3>
+        <button class="satria-modal-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="satria-modal-body">
+        <p>${escapeHtml(desc)}</p>
+      </div>
+      <div class="satria-modal-footer">
+        <button class="satria-modal-ok-btn" type="button">${isEnglish ? "Close" : "Tutup"}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  overlay.querySelector<HTMLButtonElement>(".satria-modal-ok-btn")?.focus();
+
+  const close = () => {
+    overlay.classList.add("fade-out");
+    setTimeout(() => overlay.remove(), 200);
+  };
+
+  overlay.querySelector(".satria-modal-close")?.addEventListener("click", close);
+  overlay.querySelector(".satria-modal-ok-btn")?.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
 }
 
 function isRecoveryRoute() {

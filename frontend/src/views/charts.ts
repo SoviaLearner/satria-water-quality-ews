@@ -113,9 +113,16 @@ export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondary
   `;
 }
 
-export function renderHistogram(rows: EdaRecord[], key: string) {
+export function renderHistogram(rows: EdaRecord[], key: string, language: Language = "id") {
   const nums = values(rows, key);
   const meta = numericParameters.find((item) => item.key === key);
+  const isEnglish = language === "en";
+  if (!nums.length) {
+    return renderEmptyChart(
+      isEnglish ? "No data available" : "Data tidak tersedia",
+      isEnglish ? "The selected parameter has no readable values." : "Parameter yang dipilih belum memiliki nilai yang dapat dibaca.",
+    );
+  }
   const { min, max } = extent(nums);
   const bins = Array.from({ length: 10 }, () => 0);
   nums.forEach((value) => {
@@ -124,31 +131,45 @@ export function renderHistogram(rows: EdaRecord[], key: string) {
   });
   const maxBin = Math.max(...bins, 1);
 
+  const mappedBins = bins.map((count, index) => {
+    const binStart = min + ((max - min) / bins.length) * index;
+    const binEnd = min + ((max - min) / bins.length) * (index + 1);
+    return { binStart, binEnd, count };
+  });
+
+  mappedBins.sort((a, b) => b.count - a.count);
+
+  const yAxisLabel = isEnglish ? "Frequency / Count" : "Jumlah Data / Frekuensi";
+  const xAxisLabel = isEnglish ? `${meta?.label || key} Range` : `Rentang Nilai ${meta?.label || key}`;
+
   return `
-    <div class="chart-caption">${escapeHtml(meta?.label || key)} distribution from ${nums.length} Supabase rows</div>
-    <p class="chart-help">Cara baca: batang yang lebih tinggi berarti lebih banyak data berada pada rentang nilai tersebut. Distribusi yang melebar menunjukkan variasi parameter lebih besar.</p>
-    ${renderChartStats(nums, meta?.unit)}
+    <div class="chart-caption">${escapeHtml(meta?.label || key)} ${isEnglish ? "Distribution" : "Distribusi"} (${nums.length} ${isEnglish ? "rows" : "baris"})</div>
+    <p class="chart-help">${isEnglish ? "How to read: higher bars indicate more data falls in that range." : "Cara baca: batang yang lebih tinggi berarti lebih banyak data berada pada rentang nilai tersebut."}</p>
+    ${renderChartStats(nums, meta?.unit, language)}
+    <div class="axis-label-row"><span>Y: ${escapeHtml(yAxisLabel)}</span></div>
     <div class="svg-chart histogram-chart">
-      ${bins
-        .map((count, index) => {
+      ${mappedBins
+        .map(({ binStart, binEnd, count }) => {
           const height = Math.max((count / maxBin) * 86, 8);
-          const binStart = min + ((max - min) / bins.length) * index;
-          const binEnd = min + ((max - min) / bins.length) * (index + 1);
-          return `<button type="button" title="${binStart.toFixed(3)} - ${binEnd.toFixed(3)}: ${count} rows" style="height:${height}%"><span>${count}</span></button>`;
+          const tooltip = isEnglish
+            ? `X (${meta?.label || key} Range): ${binStart.toFixed(3)} - ${binEnd.toFixed(3)}\nY (Count): ${count} rows`
+            : `X (Rentang Nilai ${meta?.label || key}): ${binStart.toFixed(3)} - ${binEnd.toFixed(3)}\nY (Jumlah Data): ${count} baris`;
+          return `<button type="button" title="${escapeHtml(tooltip)}" style="height:${height}%"><span>${count}</span></button>`;
         })
         .join("")}
     </div>
+    <div class="chart-axis-caption" style="margin-top: 28px; text-align: center; color: #53667c; font-size: 13px; font-weight: 900;">X: ${escapeHtml(xAxisLabel)}</div>
   `;
 }
 
 export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1", language: Language = "id") {
-  const nums = sample(values(rows, key), 8);
-  const { min, max } = extent(nums);
+  const nums = sample(values(rows, key), 8).sort((a, b) => b - a);
   const meta = numericParameters.find((item) => item.key === key);
-  const range = Math.max(max - min, Number.EPSILON);
   if (!nums.length) {
     return renderEmptyChart(label(language, "emptySampleTitle"), label(language, "emptySampleMessage"));
   }
+  const { min, max } = extent(nums);
+  const range = Math.max(max - min, Number.EPSILON);
   const yAxis = key === "nitrite_mg_l_1" ? label(language, "nitrateAxis") : `${parameterLabel(key, language)}${meta?.unit ? ` (${meta.unit})` : ""}`;
 
   return `
@@ -162,7 +183,10 @@ export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1", langua
           (value, index) => {
             const height = 16 + ((value - min) / range) * 76;
             const showValue = nums.length <= 4 || index === 0 || index === nums.length - 1 || value === max;
-            return `<button type="button" title="${escapeHtml(label(language, "sample"))} ${index + 1}: ${formatMetricValue(value, meta?.unit)}" style="height:${height}%;--bar-delay:${index * 55}ms">${showValue ? `<span>${formatMetricValue(value, meta?.unit)}</span>` : ""}</button>`;
+            const tooltip = language === "en"
+              ? `X (Sample rank): ${index + 1}\nY (${parameterLabel(key, language)}): ${formatMetricValue(value, meta?.unit)}`
+              : `X (Peringkat sampel): ${index + 1}\nY (${parameterLabel(key, language)}): ${formatMetricValue(value, meta?.unit)}`;
+            return `<button type="button" title="${escapeHtml(tooltip)}" style="height:${height}%;--bar-delay:${index * 55}ms">${showValue ? `<span>${formatMetricValue(value, meta?.unit)}</span>` : ""}</button>`;
           },
         )
         .join("")}

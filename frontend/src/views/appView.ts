@@ -1,6 +1,6 @@
 import { HERO_LOGO_PATH, numericParameters, predictionFields } from "../constants";
-import type { AppPage, AppState, PredictionLog } from "../types";
-import { computeEdaStats, renderClassDistribution, renderDataInfoTable, renderOutlierAnalysis, renderPhDistribution } from "../utils/eda";
+import type { AppPage, AppState, EdaRecord, PredictionLog } from "../types";
+import { computeEdaStats, renderOutlierAnalysis } from "../utils/eda";
 import { escapeAttribute, escapeHtml, formatDate, formatNumber, getDisplayName, getInitials, statusClass } from "../utils/format";
 import { t } from "../utils/translations";
 import {
@@ -497,23 +497,326 @@ function reportDateMatches(value: string, rawTerm: string) {
   return iso.includes(term) || slash.includes(term) || looseSlash === term || monthTerms.some((item) => item === term);
 }
 
+const edaReportStats = {
+  variables: 17,
+  observations: 4300,
+  missingCells: 0,
+  missingPct: "0.0%",
+  duplicateRows: 0,
+  numericVariables: 15,
+  categoricalVariables: 2,
+};
+
+const edaClassDistribution = [
+  { tier: "Reduced Suitability", count: 1500, color: "#d92d20" },
+  { tier: "Moderate Suitability", count: 1400, color: "#b26b00" },
+  { tier: "Optimal Suitability", count: 1400, color: "#079455" },
+] as const;
+
+const edaReportVariables = [
+  { label: "Temperature", type: "Numeric", keys: ["temperature"] },
+  { label: "Turbidity", type: "Numeric", keys: ["turbidity_cm"] },
+  { label: "Dissolved Oxygen", type: "Numeric", keys: ["dissolved_oxygen_mg_l"] },
+  { label: "Biochemical Oxygen Demand", type: "Numeric", keys: ["biochemical_oxygen_demand_mg_l"] },
+  { label: "Carbon Dioxide", type: "Numeric", keys: ["carbon_dioxide_co2", "carbon_dioxide_mg_l_1"] },
+  { label: "pH", type: "Numeric", keys: ["ph"] },
+  { label: "Total Alkalinity", type: "Numeric", keys: ["total_alkalinity_mg_l_1"] },
+  { label: "Total Hardness", type: "Numeric", keys: ["total_hardness_mg_l_1"] },
+  { label: "Calcium", type: "Numeric", keys: ["calcium_mg_l_1"] },
+  { label: "Ammonia", type: "Numeric", keys: ["ammonia_mg_l_1"] },
+  { label: "Nitrite", type: "Numeric", keys: ["nitrite_mg_l_1"] },
+  { label: "Phosphorus", type: "Numeric", keys: ["phosphorus_mg_l_1"] },
+  { label: "Hydrogen Sulfide", type: "Numeric", keys: ["hydrogen_sulfide_mg_l_1"] },
+  { label: "Plankton Count", type: "Numeric", keys: ["plankton_count_no_l_1"] },
+  { label: "Water Quality Label", type: "Categorical", keys: ["water_quality_label"] },
+  { label: "Aquaculture Suitability Tier", type: "Categorical", keys: ["aquaculture_suitability_tier"] },
+  { label: "Aquaculture Suitability Description", type: "Categorical", keys: ["aquaculture_suitability_description"] },
+] as const;
+
+const edaMissingValues = [
+  ["Temperature", 0, "0.0%"],
+  ["Turbidity", 0, "0.0%"],
+  ["Dissolved Oxygen", 0, "0.0%"],
+  ["Biochemical Oxygen Demand", 0, "0.0%"],
+  ["Carbon Dioxide", 0, "0.0%"],
+  ["pH", 0, "0.0%"],
+  ["Total Alkalinity", 0, "0.0%"],
+  ["Total Hardness", 0, "0.0%"],
+  ["Calcium", 0, "0.0%"],
+  ["Ammonia", 0, "0.0%"],
+  ["Nitrite", 0, "0.0%"],
+  ["Phosphorus", 0, "0.0%"],
+  ["Hydrogen Sulfide", 0, "0.0%"],
+  ["Plankton Count", 0, "0.0%"],
+  ["Water Quality Label", 0, "0.0%"],
+  ["Aquaculture Suitability Tier", 0, "0.0%"],
+  ["Aquaculture Suitability Description", 0, "0.0%"],
+] as const;
+
+const edaReferenceStats: Record<string, { mean: number; min: number; max: number; std: number }> = {
+  temperature: { mean: 25.695695348837212, min: 0.19, max: 84.25, std: 9.67018139640288 },
+  turbidity_cm: { mean: 39.046641860465115, min: 0.05, max: 99.8, std: 20.942694167920255 },
+  dissolved_oxygen_mg_l: { mean: 22.173850232558138, min: 0.134, max: 79.925, std: 27.540827399020618 },
+  biochemical_oxygen_demand_mg_l: { mean: 13.853191860465117, min: 1, max: 59.881, std: 18.335695438792932 },
+  carbon_dioxide_co2: { mean: 21.256666116279067, min: 0.001, max: 99.995, std: 29.72420239638006 },
+  ph: { mean: 28.349682093023254, min: 0.004, max: 94.993, std: 32.918874201451 },
+  total_alkalinity_mg_l_1: { mean: 339.7223569767442, min: 25.012, max: 1998.996, std: 503.283556574653 },
+  total_hardness_mg_l_1: { mean: 482.84948674418604, min: 0.256, max: 2997.531, std: 754.047011356974 },
+  calcium_mg_l_1: { mean: 340.6893630232558, min: 0.018, max: 2499.392, std: 616.3512350176514 },
+  ammonia_mg_l_1: { mean: 0.04826779069767442, min: 0, max: 0.999, std: 0.12289090331268081 },
+  nitrite_mg_l_1: { mean: 2.651685581395349, min: 0, max: 19.998, std: 5.3779775935906935 },
+  phosphorus_mg_l_1: { mean: 4.491506581395349, min: 0, max: 29.992, std: 8.664406780755474 },
+  hydrogen_sulfide_mg_l_1: { mean: 0.016472023255813956, min: 0, max: 0.099, std: 0.011871612021665208 },
+  plankton_count_no_l_1: { mean: 41073.42176697674, min: 79, max: 5964901.514, std: 394857.7733964996 },
+  water_quality_label: { mean: 1.0232558139534884, min: 0, max: 2, std: 0.8209960560096518 },
+};
+
+const variableTranslationKeys: Record<string, Parameters<typeof t>[1]> = {
+  "temperature": "paramTemperature",
+  "turbidity_cm": "paramTurbidity",
+  "dissolved_oxygen_mg_l": "paramDissolvedOxygen",
+  "biochemical_oxygen_demand_mg_l": "paramBod",
+  "carbon_dioxide_co2": "paramCarbonDioxide",
+  "carbon_dioxide_mg_l_1": "paramCarbonDioxide",
+  "ph": "paramPh",
+  "total_alkalinity_mg_l_1": "paramAlkalinity",
+  "total_hardness_mg_l_1": "paramHardness",
+  "calcium_mg_l_1": "paramCalcium",
+  "ammonia_mg_l_1": "paramAmmonia",
+  "nitrite_mg_l_1": "paramNitrite",
+  "phosphorus_mg_l_1": "paramPhosphorus",
+  "hydrogen_sulfide_mg_l_1": "paramHydrogenSulfide",
+  "plankton_count_no_l_1": "paramPlanktonCount",
+};
+
+function getVariableLabel(label: string, keys: readonly string[], isEnglish: boolean) {
+  const primaryKey = keys[0];
+  const translationKey = variableTranslationKeys[primaryKey];
+  if (translationKey) {
+    return t(isEnglish ? "en" : "id", translationKey);
+  }
+  if (label === "Water Quality Label") return isEnglish ? "Water Quality Label" : "Label Kualitas Air";
+  if (label === "Aquaculture Suitability Tier") return isEnglish ? "Aquaculture Suitability Tier" : "Kelas Kesesuaian Budidaya";
+  if (label === "Aquaculture Suitability Description") return isEnglish ? "Aquaculture Suitability Description" : "Deskripsi Kesesuaian Budidaya";
+  return label;
+}
+
+function getMissingValueName(name: string, isEnglish: boolean) {
+  const variable = edaReportVariables.find((item) => item.label === name);
+  if (variable) return getVariableLabel(variable.label, variable.keys, isEnglish);
+  if (name === "Total Alkalinity") return isEnglish ? "Total Alkalinity" : "Alkalinitas Total";
+  if (name === "Total Hardness") return isEnglish ? "Total Hardness" : "Kesadahan Total";
+  if (name === "Calcium") return isEnglish ? "Calcium" : "Kalsium";
+  if (name === "Plankton Count") return isEnglish ? "Plankton Count" : "Jumlah Plankton";
+  return name;
+}
+
 function renderEdaPage(state: AppState) {
   const isEnglish = state.language === "en";
-  const stats = computeEdaStats(state.edaRows);
   const active = numericParameters.find((item) => item.key === state.edaMetric);
-  return `<section class="work-page eda-native-page"><div class="page-heading row-heading"><div><h1>${isEnglish ? "Exploratory Data Analysis" : "Analisis Data Eksploratif"}</h1><p>${isEnglish ? "Native SATRIA EDA dashboard based on the same dataset context as the PyCaret research report. Values are loaded from Supabase and presented without raw HTML embedding." : "Dashboard EDA native SATRIA berdasarkan konteks dataset yang sama dengan report penelitian PyCaret. Nilai dimuat dari Supabase dan disajikan tanpa embed HTML mentah."}</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Supabase synced" : "Supabase pending"}</span></div><div class="eda-action-row"><button class="refresh-button" type="button" data-refresh>${isEnglish ? "Refresh Data" : "Refresh Data"}</button><button class="refresh-button secondary" type="button" data-page="reports">${isEnglish ? "View Full Report" : "Lihat Laporan Lengkap"}</button></div></div><div class="eda-summary-grid"><article><span>Rows</span><strong>${formatNumber(stats.rows)}</strong><p>Sample dari water_quality_clean.</p></article><article><span>Features</span><strong>${formatNumber(stats.features)}</strong><p>Kolom dataset yang terbaca.</p></article><article><span>Missing Values</span><strong>${stats.missingPct.toFixed(2)}%</strong><p>Persentase cell kosong.</p></article><article><span>Avg Nitrite</span><strong>${stats.nitriteMean.toFixed(3)}</strong><p>Mapping memakai nitrite_mg_l_1.</p></article></div><div class="eda-label-grid"><article><strong>Ideal = 0</strong><p>${isEnglish ? "Water quality is safe and meets the expected standard." : "Kondisi air aman dan sesuai standar."}</p></article><article><strong>Sedang / Moderate = 1</strong><p>${isEnglish ? "Water quality requires attention." : "Kondisi air memerlukan perhatian."}</p></article><article><strong>Bahaya / Dangerous = 2</strong><p>${isEnglish ? "Water quality may be hazardous." : "Kondisi air berpotensi membahayakan."}</p></article></div><div class="eda-dashboard-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>Parameter Distribution: ${escapeHtml(active?.label || "pH")}</h2><p>${isEnglish ? "Distribution chart for the selected water quality parameter." : "Grafik distribusi untuk parameter kualitas air yang dipilih."}</p></div>${renderMetricTabs(state.edaMetric, "eda")}</div>${renderHistogram(state.edaRows, state.edaMetric)}</article><article class="chart-card"><h2>Class Distribution</h2>${renderClassDistribution(state.edaRows)}</article><article class="chart-card"><h2>pH Distribution</h2>${renderPhDistribution(state.edaRows)}</article><article class="chart-card wide"><h2>Outlier Analysis</h2>${renderOutlierAnalysis(state.edaRows)}</article><article class="chart-card wide"><h2>Statistical Summary</h2>${renderStatsTable(state)}</article><article class="chart-card wide"><h2>Dataset Overview & Missing Values</h2>${renderDataInfoTable(state.edaRows)}</article><article class="chart-card wide"><h2>Chart Explanation</h2><p class="chart-help">${isEnglish ? "Read distribution bars as frequency groups, class distribution as label composition, and outlier cards as IQR-based flags. Extreme values should be validated before removal because they may indicate real early warning conditions." : "Baca batang distribusi sebagai kelompok frekuensi, distribusi kelas sebagai komposisi label, dan kartu outlier sebagai flag berbasis IQR. Nilai ekstrem perlu divalidasi sebelum dihapus karena bisa menunjukkan kondisi peringatan dini yang nyata."}</p></article></div></section>`;
+  return `<section class="work-page eda-native-page"><div class="page-heading row-heading"><div><h1>${isEnglish ? "Exploratory Data Analysis" : "Analisis Data Eksploratif"}</h1><p>${isEnglish ? "Statistical overview of the SATRIA water quality dataset based on the reference notebook and report." : "Ikhtisar statistik dataset kualitas air SATRIA berdasarkan notebook dan report referensi."}</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? (isEnglish ? "Dataset synchronized" : "Dataset tersinkron") : (isEnglish ? "Dataset pending" : "Dataset menunggu")}</span></div></div>
+
+  <div class="eda-summary-grid">
+    <article>
+      <span>${isEnglish ? "Observations" : "Observasi"}</span>
+      <strong>${formatNumber(edaReportStats.observations)}</strong>
+      <p>${isEnglish ? "Rows listed in the cleaned reference dataset." : "Baris pada dataset bersih referensi."}</p>
+    </article>
+    <article>
+      <span>${isEnglish ? "Variables" : "Variabel"}</span>
+      <strong>${formatNumber(edaReportStats.variables)}</strong>
+      <p>${isEnglish ? "Columns included in the EDA report." : "Kolom yang tercakup dalam report EDA."}</p>
+    </article>
+    <article>
+      <span>${isEnglish ? "Missing Cells" : "Sel Kosong"}</span>
+      <strong>${formatNumber(edaReportStats.missingCells)}</strong>
+      <p>${isEnglish ? "Total empty cells after preprocessing." : "Total sel kosong setelah preprocessing."}</p>
+    </article>
+    <article>
+      <span>${isEnglish ? "Missing Rate" : "Tingkat Sel Kosong"}</span>
+      <strong>${edaReportStats.missingPct}</strong>
+      <p>${isEnglish ? "Missing cells divided by all dataset cells." : "Sel kosong dibanding seluruh sel dataset."}</p>
+    </article>
+  </div>
+
+  <div class="eda-dashboard-grid">
+    <article class="chart-card wide">
+      <h2>${isEnglish ? "Dataset Summary" : "Ringkasan Dataset"}</h2>
+      <p class="chart-help">${isEnglish ? "Reference summary of dataset size, variable types, and completeness." : "Ringkasan referensi mengenai ukuran dataset, tipe variabel, dan kelengkapan data."}</p>
+      <div class="eda-accordion">
+        <details open>
+          <summary>${isEnglish ? "Dataset Overview" : "Ikhtisar Dataset"}</summary>
+          <div class="accordion-content">
+            ${renderDatasetOverviewTable(isEnglish)}
+          </div>
+        </details>
+        <details>
+          <summary>${isEnglish ? "Variable Types" : "Tipe Variabel"}</summary>
+          <div class="accordion-content">
+            ${renderVariableTypesTable(isEnglish)}
+          </div>
+        </details>
+        <details>
+          <summary>${isEnglish ? "Missing Values Analysis" : "Analisis Nilai Kosong"}</summary>
+          <div class="accordion-content">
+            ${renderMissingValuesTable(isEnglish)}
+          </div>
+        </details>
+      </div>
+    </article>
+
+    <article class="chart-card wide">
+      <div class="chart-heading">
+        <div>
+          <h2>${isEnglish ? "Parameter Distribution" : "Distribusi Parameter"}: ${escapeHtml(active?.label || "pH")}</h2>
+        </div>
+        ${renderMetricTabs(state.edaMetric, "eda", state.language)}
+      </div>
+      ${renderHistogram(state.edaRows, state.edaMetric, state.language)}
+    </article>
+
+    <article class="chart-card">
+      <h2>${isEnglish ? "Class Distribution" : "Distribusi Kelas"}</h2>
+      ${renderEdaClassDistribution(isEnglish)}
+    </article>
+
+    <article class="chart-card">
+      <h2>${isEnglish ? "Data Quality Overview" : "Ikhtisar Kualitas Data"}</h2>
+      ${renderDataQualityOverview(isEnglish)}
+    </article>
+
+    <article class="chart-card wide">
+      <h2>${isEnglish ? "Outlier Analysis" : "Analisis Outlier"}</h2>
+      ${renderOutlierAnalysis(state.edaRows, state.language)}
+    </article>
+
+    <article class="chart-card wide">
+      <div class="eda-card-heading">
+        <h2>${isEnglish ? "Variable Statistics" : "Statistik Variabel"}</h2>
+      </div>
+      <div class="table-scroll">
+        ${renderStatsTable(state)}
+      </div>
+    </article>
+
+    <article class="chart-card wide">
+      <h2>${isEnglish ? "Sample Dataset" : "Sampel Dataset"}</h2>
+      ${renderSampleDatasetTable(state.edaRows, isEnglish)}
+    </article>
+  </div></section>`;
+}
+
+function renderDatasetOverviewTable(isEnglish: boolean) {
+  const rows = [
+    [isEnglish ? "Number of Variables" : "Jumlah Variabel", edaReportStats.variables],
+    [isEnglish ? "Number of Observations" : "Jumlah Observasi", edaReportStats.observations],
+    [isEnglish ? "Missing Cells" : "Sel Kosong", edaReportStats.missingCells],
+    [isEnglish ? "Missing Cells (%)" : "Sel Kosong (%)", edaReportStats.missingPct],
+    [isEnglish ? "Duplicate Rows" : "Baris Duplikat", edaReportStats.duplicateRows],
+    [isEnglish ? "Numeric Variables" : "Variabel Numerik", edaReportStats.numericVariables],
+    [isEnglish ? "Categorical Variables" : "Variabel Kategorikal", edaReportStats.categoricalVariables],
+  ];
+  return `<table><tbody>${rows.map(([name, value]) => `<tr><th>${escapeHtml(String(name))}</th><td>${escapeHtml(String(value))}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function renderVariableTypesTable(isEnglish: boolean) {
+  return `<table><thead><tr><th>${isEnglish ? "Variable" : "Variabel"}</th><th>${isEnglish ? "Type" : "Tipe"}</th></tr></thead><tbody>${edaReportVariables.map((item) => `<tr><td>${escapeHtml(getVariableLabel(item.label, item.keys, isEnglish))}</td><td><span class="badge">${escapeHtml(isEnglish ? item.type : item.type === "Numeric" ? "Numerik" : "Kategorikal")}</span></td></tr>`).join("")}</tbody></table>`;
+}
+
+function renderMissingValuesTable(isEnglish: boolean) {
+  return `<table><thead><tr><th>${isEnglish ? "Variable" : "Variabel"}</th><th>${isEnglish ? "Missing Count" : "Jumlah Kosong"}</th><th>${isEnglish ? "Missing %" : "Persentase Kosong"}</th></tr></thead><tbody>${edaMissingValues.map(([name, count, pct]) => `<tr><td>${escapeHtml(getMissingValueName(name, isEnglish))}</td><td>${formatNumber(count)}</td><td>${pct}</td></tr>`).join("")}<tr><td><strong>${isEnglish ? "Total Missing Cells" : "Total Sel Kosong"}</strong></td><td><strong>${formatNumber(edaReportStats.missingCells)}</strong></td><td><strong>${edaReportStats.missingPct}</strong></td></tr></tbody></table>`;
+}
+
+function getEdaValue(row: EdaRecord, keys: readonly string[]) {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return "-";
+}
+
+function getEdaNumbers(rows: EdaRecord[], keys: readonly string[]) {
+  return rows.map((row) => Number(getEdaValue(row, keys))).filter(Number.isFinite);
 }
 
 function renderStatsTable(state: AppState) {
-  const stats = computeEdaStats(state.edaRows);
+  const isEnglish = state.language === "en";
+  const rows = edaReportVariables.filter((item) => item.type === "Numeric").map((item) => {
+    const reference = edaReferenceStats[item.keys[0]];
+    if (!reference) return [getVariableLabel(item.label, item.keys, isEnglish), "-", "-", "-", "-"];
+    return [getVariableLabel(item.label, item.keys, isEnglish), formatStat(reference.mean), formatStat(reference.std), formatStat(reference.min), formatStat(reference.max)];
+  });
+  return `<table><thead><tr><th>${isEnglish ? "Variable" : "Variabel"}</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th></tr></thead><tbody>${rows.map(([name, mean, std, min, max]) => `<tr><td class="stats-var-name">${escapeHtml(String(name))}</td><td>${escapeHtml(String(mean))}</td><td>${escapeHtml(String(std))}</td><td>${escapeHtml(String(min))}</td><td>${escapeHtml(String(max))}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function renderSampleDatasetTable(rows: EdaRecord[], isEnglish: boolean) {
+  const sampleRows = rows.slice(0, 5);
+  if (!sampleRows.length) return `<div class="empty-chart"><strong>${isEnglish ? "No data available" : "Data tidak tersedia"}</strong><p>${isEnglish ? "Sample rows cannot be displayed because the dataset has not been loaded." : "Sampel baris belum dapat ditampilkan karena dataset belum termuat."}</p></div>`;
+  return `<div class="sample-table-note">${isEnglish ? "First five rows from the loaded dataset." : "Lima baris pertama dari dataset yang termuat."}</div><div class="table-scroll sample-dataset-scroll"><table><thead><tr>${edaReportVariables.map((item) => `<th>${escapeHtml(getVariableLabel(item.label, item.keys, isEnglish))}</th>`).join("")}</tr></thead><tbody>${sampleRows.map((row) => `<tr>${edaReportVariables.map((item) => {
+    const rawVal = getEdaValue(row, item.keys);
+    const isDescriptionColumn = item.keys.includes("aquaculture_suitability_description");
+    if (isDescriptionColumn && rawVal !== "-") {
+      const truncated = String(rawVal).length > 25 ? String(rawVal).slice(0, 25) + "..." : String(rawVal);
+      return `<td><div class="desc-cell-wrapper"><span class="desc-text-preview" title="${escapeAttribute(String(rawVal))}">${escapeHtml(truncated)}</span><button type="button" class="btn-view-desc" data-desc="${escapeAttribute(String(rawVal))}">${isEnglish ? "View" : "Lihat"}</button></div></td>`;
+    }
+    return `<td>${escapeHtml(formatCellValue(rawVal))}</td>`;
+  }).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+function renderEdaClassDistribution(isEnglish: boolean) {
+  const total = edaClassDistribution.reduce((sum, item) => sum + item.count, 0);
+  if (!total) return `<div class="empty-chart"><strong>${isEnglish ? "No data available" : "Data tidak tersedia"}</strong></div>`;
+  const sorted = [...edaClassDistribution].sort((a, b) => b.count - a.count);
+  return `<div class="eda-class-distribution">
+    <p class="chart-help">${isEnglish ? "Class composition from the reference EDA report, sorted by count." : "Komposisi kelas dari report EDA referensi, diurutkan berdasarkan jumlah data."}</p>
+    <div class="axis-label-row"><span>Y: ${isEnglish ? "Suitability class" : "Kelas kesesuaian"}</span><span>X: ${isEnglish ? "Count and percentage" : "Jumlah dan persentase"}</span></div>
+    <div class="class-bars" role="img" aria-label="${isEnglish ? "Class distribution chart" : "Grafik distribusi kelas"}">
+      ${sorted.map((item) => {
+        const pct = (item.count / total) * 100;
+        const translated = translateSuitabilityTier(item.tier, isEnglish);
+        const tooltip = isEnglish
+          ? `X (Class): ${item.tier}\nY (Count): ${item.count} records (${pct.toFixed(2)}%)`
+          : `X (Kelas): ${translated}\nY (Jumlah): ${item.count} data (${pct.toFixed(2)}%)`;
+        return `<div class="class-bar-row" title="${escapeAttribute(tooltip)}"><span>${escapeHtml(translated)}</span><strong>${formatNumber(item.count)} (${pct.toFixed(2)}%)</strong><em style="--w:${pct.toFixed(2)}%;--bar-color:${item.color}"></em></div>`;
+      }).join("")}
+    </div>
+    <div class="table-scroll">
+      <table class="distribution-table"><thead><tr><th>${isEnglish ? "Class" : "Kelas"}</th><th>${isEnglish ? "Count" : "Jumlah"}</th><th>${isEnglish ? "Percentage" : "Persentase"}</th></tr></thead><tbody>${sorted.map((item) => {
+        const pct = (item.count / total) * 100;
+        return `<tr><td>${escapeHtml(translateSuitabilityTier(item.tier, isEnglish))}</td><td>${formatNumber(item.count)}</td><td>${pct.toFixed(2)}%</td></tr>`;
+      }).join("")}</tbody></table>
+    </div>
+  </div>`;
+}
+
+function renderDataQualityOverview(isEnglish: boolean) {
   const rows = [
-    ["Temperature", stats.tempMean, 1.25],
-    ["pH", stats.avgPh, 0.42],
-    ["DO", stats.doMean, 0.88],
-    ["Ammonia", stats.ammoniaMean, 0.015],
-    ["Nitrite", stats.nitriteMean, 0.008],
+    [isEnglish ? "Raw rows" : "Baris awal", edaReportStats.observations],
+    [isEnglish ? "Cleaned rows" : "Baris bersih", edaReportStats.observations],
+    [isEnglish ? "Duplicate rows" : "Baris duplikat", edaReportStats.duplicateRows],
+    [isEnglish ? "Missing cells" : "Sel kosong", edaReportStats.missingCells],
   ];
-  return `<table><thead><tr><th>Variable</th><th>Mean</th><th>Std Dev</th></tr></thead><tbody>${rows.map(([name, mean, std]) => `<tr><td>${name}</td><td>${Number(mean).toFixed(3)}</td><td>${Number(std).toFixed(3)}</td></tr>`).join("")}</tbody></table>`;
+  return `<p class="chart-help">${isEnglish ? "Completeness indicators from the processed EDA summary." : "Indikator kelengkapan dari ringkasan EDA hasil proses."}</p><table><tbody>${rows.map(([name, value]) => `<tr><th>${escapeHtml(String(name))}</th><td>${escapeHtml(String(value))}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function translateSuitabilityTier(value: string, isEnglish: boolean) {
+  if (isEnglish) return value;
+  if (value === "Reduced Suitability") return "Kelayakan Berkurang";
+  if (value === "Moderate Suitability") return "Kelayakan Sedang";
+  if (value === "Optimal Suitability") return "Kelayakan Optimal";
+  return value || "-";
+}
+
+function formatStat(value: number) {
+  if (!Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("en", { maximumFractionDigits: Math.abs(value) < 1 ? 4 : 3 }).format(value);
+}
+
+function formatCellValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "-";
+  if (typeof value === "string") return value.trim() || "-";
+  return "-";
 }
 
 function renderSettingsPage(state: AppState) {

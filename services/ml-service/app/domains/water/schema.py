@@ -4,18 +4,19 @@ from typing import Dict, Optional
 class WaterQualityInput(BaseModel):
     temperature: Optional[float] = Field(None, alias="Temperature")
     turbidity: Optional[float] = Field(None, alias="Turbidity (cm)")
-    dissolved_oxygen: Optional[float] = Field(None, alias="Dissolved Oxygen (mg/L)")
-    biochemical_oxygen_demand: Optional[float] = Field(None, alias="Biochemical Oxygen Demand (mg/L)")
-    carbon_dioxide: Optional[float] = Field(None, alias="Carbon Dioxide (CO2)")
+    dissolved_oxygen: Optional[float] = Field(None, alias="Dissolved Oxygen (mg L-1)")
+    biochemical_oxygen_demand: Optional[float] = Field(None, alias="Biochemical Oxygen Demand (mg L-1)")
+    carbon_dioxide: Optional[float] = Field(None, alias="Carbon Dioxide (mg L-1)")
     ph: Optional[float] = Field(None, alias="pH")
-    total_alkalinity: Optional[float] = Field(None, alias="Total Alkalinity (mg L-1)")
-    total_hardness: Optional[float] = Field(None, alias="Total Hardness (mg L-1)")
+    total_alkalinity: Optional[float] = Field(None, alias="Total Alkalinity (mg L-1 as CaCO3)")
+    total_hardness: Optional[float] = Field(None, alias="Total Hardness (mg L-1 as CaCO3)")
     calcium: Optional[float] = Field(None, alias="Calcium (mg L-1)")
     ammonia: Optional[float] = Field(None, alias="Ammonia (mg L-1)")
     nitrite: Optional[float] = Field(None, alias="Nitrite (mg L-1)")
     phosphorus: Optional[float] = Field(None, alias="Phosphorus (mg L-1)")
-    hydrogen_sulfide: Optional[float] = Field(None, alias="Hydrogen Sulfide (mg L-1)")
-    plankton_count: Optional[float] = Field(None, alias="Plankton Count (No. L-1)")
+    hydrogen_sulphide: Optional[float] = Field(None, alias="Hydrogen Sulphide (mg L-1)")
+    estimated_magnesium: Optional[float] = Field(None, alias="Estimated Magnesium (mg L-1)")
+    plankton_abundance: Optional[float] = Field(None, alias="Plankton Abundance (No. L-1)")
 
     class Config:
         populate_by_name = True

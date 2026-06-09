@@ -1,24 +1,26 @@
 {
     "classes": [
-        "Moderate Suitability",
-        "Optimal Suitability",
-        "Reduced Suitability"
+        "Highly Suitable",
+        "Restricted / Stressed",
+        "Suitable",
+        "Unsuitable / Critical"
     ],
     "features": [
         "Temperature",
         "Turbidity (cm)",
-        "Dissolved Oxygen (mg/L)",
-        "Biochemical Oxygen Demand (mg/L)",
-        "Carbon Dioxide (CO2)",
+        "Dissolved Oxygen (mg L-1)",
+        "Biochemical Oxygen Demand (mg L-1)",
+        "Carbon Dioxide (mg L-1)",
         "pH",
-        "Total Alkalinity (mg L-1)",
-        "Total Hardness (mg L-1)",
+        "Total Alkalinity (mg L-1 as CaCO3)",
+        "Total Hardness (mg L-1 as CaCO3)",
         "Calcium (mg L-1)",
+        "Estimated Magnesium (mg L-1)",
         "Ammonia (mg L-1)",
         "Nitrite (mg L-1)",
         "Phosphorus (mg L-1)",
-        "Hydrogen Sulfide (mg L-1)",
-        "Plankton Count (No. L-1)"
+        "Hydrogen Sulphide (mg L-1)",
+        "Plankton Abundance (No. L-1)"
     ],
-    "target_column": "Aquaculture Suitability Tier"
+    "target_column": "WQI-Derived Aquaculture Suitability Classification"
 }

@@ -59,7 +59,7 @@ echo.
 echo ===================================================
 echo   System is UP and RUNNING (with Docker)!
 echo   - Backend Gateway: http://127.0.0.1:8000
-echo   - MLflow Dashboard: http://127.0.0.1:5000
+echo   - MLflow Dashboard: http://127.0.0.1:5001
 echo   - Frontend: http://127.0.0.1:5173
 echo.
 echo   To stop all backend services later, run:
@@ -122,14 +122,14 @@ echo   - Frontend:        http://127.0.0.1:5173
 echo   - API Gateway:     http://127.0.0.1:8000
 echo   - ML Service:      http://127.0.0.1:8001
 echo   - Data Service:    http://127.0.0.1:8002
-echo   - MLflow Dashboard: http://127.0.0.1:5000
+echo   - MLflow Dashboard: http://127.0.0.1:5001
 echo ===================================================
 timeout /t 3 /nobreak >nul
 
 start http://127.0.0.1:5173
 
 :: Using npx concurrently to run all services in one window and kill all on Ctrl+C
-call npx concurrently -k -p "[{name}]" -n "MLflow,ML-SVC,DATA-SVC,API-GW,REACT" -c "blue,magenta,cyan,green,yellow" "venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5000 --workers 1" "cd services\ml-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001" "cd services\data-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002" "cd services\api-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000" "cd frontend && npm run dev"
+call npx concurrently -k -p "[{name}]" -n "MLflow,ML-SVC,DATA-SVC,API-GW,REACT" -c "blue,magenta,cyan,green,yellow" "venv\Scripts\python.exe -m mlflow server --host 127.0.0.1 --port 5001 --workers 1" "cd services\ml-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001" "cd services\data-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002" "cd services\api-service && ..\..\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000" "cd frontend && npm run dev"
 
 echo.
 echo ===================================================
@@ -147,7 +147,7 @@ exit /b 0
 :: This ensures no zombie/orphan processes survive between runs
 :: ============================================================
 :cleanup_ports
-for %%P in (5000 8000 8001 8002 5173) do (
+for %%P in (5001 8000 8001 8002 5173) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%%P ^| findstr LISTENING 2^>nul') do (
         if not "%%a"=="0" (
             taskkill /PID %%a /F >nul 2>&1

@@ -5,14 +5,11 @@ import { escapeAttribute, escapeHtml, formatDate, formatNumber, getDisplayName, 
 import { t } from "../utils/translations";
 import {
   renderBarChart,
-  renderBoxplotLike,
-  renderDatasetClassDistribution,
   renderDonut,
   renderHeatmap,
   renderHistogram,
   renderLineChart,
   renderMetricTabs,
-  renderRiskFlagSummary,
 } from "./charts";
 
 export function renderApp(state: AppState) {
@@ -337,9 +334,10 @@ function renderPredictionPage(state: AppState) {
             <button type="reset" class="preset-reset-btn">${label("resetForm")}</button>
           </div>
           <div class="preset-buttons">
-            <button type="button" class="preset-btn optimal" data-preset="optimal">${label("presetOptimal")} (${label("statusOptimal")})</button>
-            <button type="button" class="preset-btn moderate" data-preset="moderate">${label("presetModerate")} (${label("statusModerate")})</button>
-            <button type="button" class="preset-btn critical" data-preset="critical">${label("presetCritical")} (${label("statusReduced")})</button>
+            <button type="button" class="preset-btn highly-suitable" data-preset="highly_suitable">${label("presetHighlySuitable")}</button>
+            <button type="button" class="preset-btn suitable" data-preset="suitable">${label("presetSuitable")}</button>
+            <button type="button" class="preset-btn restricted-stressed" data-preset="restricted_stressed">${label("presetRestrictedStressed")}</button>
+            <button type="button" class="preset-btn unsuitable-critical" data-preset="unsuitable_critical">${label("presetUnsuitableCritical")}</button>
           </div>
         </div>
         <div class="parameter-grid">${predictionFields.map(([name, , example]) => `<label><span>${escapeHtml(predictionFieldLabel(name, state.language))}</span><small>${label("inputFormatHint")}</small><input name="${name}" type="number" step="any" placeholder="${label("sample")}: ${example}" required /><em class="input-error">${label("inputFormatError")}</em></label>`).join("")}</div>
@@ -407,10 +405,11 @@ function parameterTranslationKey(key: string): Parameters<typeof t>[1] {
     total_alkalinity_mg_l_1: "paramAlkalinity",
     turbidity_cm: "paramTurbidity",
     biochemical_oxygen_demand_mg_l: "paramBod",
-    carbon_dioxide_co2: "paramCarbonDioxide",
+    carbon_dioxide_mg_l: "paramCarbonDioxide",
     calcium_mg_l_1: "paramCalcium",
-    hydrogen_sulfide_mg_l_1: "paramHydrogenSulfide",
-    plankton_count_no_l_1: "paramPlanktonCount",
+    estimated_magnesium_mg_l_1: "paramEstimatedMagnesium",
+    hydrogen_sulphide_mg_l_1: "paramHydrogenSulphide",
+    plankton_abundance_no_l_1: "paramPlanktonAbundance",
   };
   return map[key] || "valueAxis";
 }
@@ -429,6 +428,18 @@ function buildPredictionJsonExample() {
 
 function translateStatus(status: string, language: AppState["language"]) {
   const normalized = status.toLowerCase();
+  if (normalized.includes("highly suitable")) {
+    return language === "en" ? "Highly Suitable" : "Sangat Sesuai";
+  }
+  if (normalized.includes("unsuitable") || normalized.includes("critical")) {
+    return language === "en" ? "Unsuitable / Critical" : "Tidak Sesuai / Kritis";
+  }
+  if (normalized.includes("suitable")) {
+    return language === "en" ? "Suitable" : "Sesuai";
+  }
+  if (normalized.includes("restricted") || normalized.includes("stressed")) {
+    return language === "en" ? "Restricted / Stressed" : "Terbatas / Stres";
+  }
   if (normalized.includes("optimal")) return t(language, "statusOptimal");
   if (normalized.includes("moderate")) return t(language, "statusModerate");
   if (normalized.includes("reduced")) return t(language, "statusReduced");
@@ -498,19 +509,20 @@ function reportDateMatches(value: string, rawTerm: string) {
 }
 
 const edaReportStats = {
-  variables: 17,
+  variables: 21,
   observations: 4300,
   missingCells: 0,
   missingPct: "0.0%",
   duplicateRows: 0,
-  numericVariables: 15,
-  categoricalVariables: 2,
+  numericVariables: 16,
+  categoricalVariables: 4,
 };
 
 const edaClassDistribution = [
-  { tier: "Reduced Suitability", count: 1500, color: "#d92d20" },
-  { tier: "Moderate Suitability", count: 1400, color: "#b26b00" },
-  { tier: "Optimal Suitability", count: 1400, color: "#079455" },
+  { tier: "Highly Suitable", count: 2800, color: "#079455" },
+  { tier: "Restricted / Stressed", count: 1291, color: "#d92d20" },
+  { tier: "Suitable", count: 192, color: "#b26b00" },
+  { tier: "Unsuitable / Critical", count: 17, color: "#ef4444" },
 ] as const;
 
 const edaReportVariables = [
@@ -518,19 +530,22 @@ const edaReportVariables = [
   { label: "Turbidity", type: "Numeric", keys: ["turbidity_cm"] },
   { label: "Dissolved Oxygen", type: "Numeric", keys: ["dissolved_oxygen_mg_l"] },
   { label: "Biochemical Oxygen Demand", type: "Numeric", keys: ["biochemical_oxygen_demand_mg_l"] },
-  { label: "Carbon Dioxide", type: "Numeric", keys: ["carbon_dioxide_co2", "carbon_dioxide_mg_l_1"] },
+  { label: "Carbon Dioxide", type: "Numeric", keys: ["carbon_dioxide_mg_l"] },
   { label: "pH", type: "Numeric", keys: ["ph"] },
   { label: "Total Alkalinity", type: "Numeric", keys: ["total_alkalinity_mg_l_1"] },
   { label: "Total Hardness", type: "Numeric", keys: ["total_hardness_mg_l_1"] },
   { label: "Calcium", type: "Numeric", keys: ["calcium_mg_l_1"] },
+  { label: "Estimated Magnesium", type: "Numeric", keys: ["estimated_magnesium_mg_l_1"] },
   { label: "Ammonia", type: "Numeric", keys: ["ammonia_mg_l_1"] },
   { label: "Nitrite", type: "Numeric", keys: ["nitrite_mg_l_1"] },
   { label: "Phosphorus", type: "Numeric", keys: ["phosphorus_mg_l_1"] },
-  { label: "Hydrogen Sulfide", type: "Numeric", keys: ["hydrogen_sulfide_mg_l_1"] },
-  { label: "Plankton Count", type: "Numeric", keys: ["plankton_count_no_l_1"] },
-  { label: "Water Quality Label", type: "Categorical", keys: ["water_quality_label"] },
-  { label: "Aquaculture Suitability Tier", type: "Categorical", keys: ["aquaculture_suitability_tier"] },
-  { label: "Aquaculture Suitability Description", type: "Categorical", keys: ["aquaculture_suitability_description"] },
+  { label: "Hydrogen Sulphide", type: "Numeric", keys: ["hydrogen_sulphide_mg_l_1"] },
+  { label: "Plankton Abundance", type: "Numeric", keys: ["plankton_abundance_no_l_1"] },
+  { label: "Water Quality Index", type: "Numeric", keys: ["water_quality_index_wqi"] },
+  { label: "Quality Label", type: "Categorical", keys: ["wqi_derived_quality_label"] },
+  { label: "Quality Category", type: "Categorical", keys: ["wqi_derived_quality_category"] },
+  { label: "Suitability Classification", type: "Categorical", keys: ["wqi_derived_aquaculture_suitability_classification"] },
+  { label: "Suitability Description", type: "Categorical", keys: ["wqi_derived_aquaculture_suitability_description"] },
 ] as const;
 
 const edaMissingValues = [
@@ -543,32 +558,35 @@ const edaMissingValues = [
   ["Total Alkalinity", 0, "0.0%"],
   ["Total Hardness", 0, "0.0%"],
   ["Calcium", 0, "0.0%"],
+  ["Estimated Magnesium", 0, "0.0%"],
   ["Ammonia", 0, "0.0%"],
   ["Nitrite", 0, "0.0%"],
   ["Phosphorus", 0, "0.0%"],
-  ["Hydrogen Sulfide", 0, "0.0%"],
-  ["Plankton Count", 0, "0.0%"],
-  ["Water Quality Label", 0, "0.0%"],
-  ["Aquaculture Suitability Tier", 0, "0.0%"],
-  ["Aquaculture Suitability Description", 0, "0.0%"],
+  ["Hydrogen Sulphide", 0, "0.0%"],
+  ["Plankton Abundance", 0, "0.0%"],
+  ["Water Quality Index", 0, "0.0%"],
+  ["Quality Label", 0, "0.0%"],
+  ["Quality Category", 0, "0.0%"],
+  ["Suitability Classification", 0, "0.0%"],
+  ["Suitability Description", 0, "0.0%"],
 ] as const;
 
 const edaReferenceStats: Record<string, { mean: number; min: number; max: number; std: number }> = {
-  temperature: { mean: 25.695695348837212, min: 0.19, max: 84.25, std: 9.67018139640288 },
-  turbidity_cm: { mean: 39.046641860465115, min: 0.05, max: 99.8, std: 20.942694167920255 },
-  dissolved_oxygen_mg_l: { mean: 22.173850232558138, min: 0.134, max: 79.925, std: 27.540827399020618 },
-  biochemical_oxygen_demand_mg_l: { mean: 13.853191860465117, min: 1, max: 59.881, std: 18.335695438792932 },
-  carbon_dioxide_co2: { mean: 21.256666116279067, min: 0.001, max: 99.995, std: 29.72420239638006 },
-  ph: { mean: 28.349682093023254, min: 0.004, max: 94.993, std: 32.918874201451 },
-  total_alkalinity_mg_l_1: { mean: 339.7223569767442, min: 25.012, max: 1998.996, std: 503.283556574653 },
-  total_hardness_mg_l_1: { mean: 482.84948674418604, min: 0.256, max: 2997.531, std: 754.047011356974 },
-  calcium_mg_l_1: { mean: 340.6893630232558, min: 0.018, max: 2499.392, std: 616.3512350176514 },
-  ammonia_mg_l_1: { mean: 0.04826779069767442, min: 0, max: 0.999, std: 0.12289090331268081 },
-  nitrite_mg_l_1: { mean: 2.651685581395349, min: 0, max: 19.998, std: 5.3779775935906935 },
-  phosphorus_mg_l_1: { mean: 4.491506581395349, min: 0, max: 29.992, std: 8.664406780755474 },
-  hydrogen_sulfide_mg_l_1: { mean: 0.016472023255813956, min: 0, max: 0.099, std: 0.011871612021665208 },
-  plankton_count_no_l_1: { mean: 41073.42176697674, min: 79, max: 5964901.514, std: 394857.7733964996 },
-  water_quality_label: { mean: 1.0232558139534884, min: 0, max: 2, std: 0.8209960560096518 },
+  temperature: { mean: 22.9491395349, min: 15.0, max: 32.0, std: 3.2465380569 },
+  turbidity_cm: { mean: 43.20561, min: 10.0, max: 81.06, std: 20.1272236292 },
+  dissolved_oxygen_mg_l: { mean: 4.4915225581, min: 0.2, max: 6.587, std: 2.0990797903 },
+  biochemical_oxygen_demand_mg_l: { mean: 3.4215097674, min: 1.0, max: 8.0, std: 1.9060865225 },
+  carbon_dioxide_mg_l: { mean: 3.5431065116, min: 1.668, max: 10.0, std: 1.7506439893 },
+  ph: { mean: 7.6871353488, min: 6.0, max: 8.5, std: 0.4187242961 },
+  total_alkalinity_mg_l_1: { mean: 139.7381630233, min: 100.0, max: 300.0, std: 49.4014769713 },
+  total_hardness_mg_l_1: { mean: 188.7953565116, min: 25.815, max: 763.341, std: 105.4914769953 },
+  calcium_mg_l_1: { mean: 44.780682093, min: 5.0, max: 180.0, std: 26.8992978878 },
+  estimated_magnesium_mg_l_1: { mean: 18.6930546512, min: 2.753, max: 76.531, std: 10.7700197853 },
+  ammonia_mg_l_1: { mean: 0.2667846512, min: 0.02, max: 2.0, std: 0.3265816918 },
+  nitrite_mg_l_1: { mean: 0.0293513953, min: 0.001, max: 0.1, std: 0.0249862397 },
+  phosphorus_mg_l_1: { mean: 0.1306497674, min: 0.01, max: 0.5, std: 0.1201951431 },
+  hydrogen_sulphide_mg_l_1: { mean: 0.011535814, min: 0.001, max: 0.05, std: 0.0113580265 },
+  plankton_abundance_no_l_1: { mean: 4170.2741860465, min: 500.0, max: 6596.0, std: 1889.1769223646 },
 };
 
 const variableTranslationKeys: Record<string, Parameters<typeof t>[1]> = {
@@ -576,17 +594,17 @@ const variableTranslationKeys: Record<string, Parameters<typeof t>[1]> = {
   "turbidity_cm": "paramTurbidity",
   "dissolved_oxygen_mg_l": "paramDissolvedOxygen",
   "biochemical_oxygen_demand_mg_l": "paramBod",
-  "carbon_dioxide_co2": "paramCarbonDioxide",
-  "carbon_dioxide_mg_l_1": "paramCarbonDioxide",
+  "carbon_dioxide_mg_l": "paramCarbonDioxide",
   "ph": "paramPh",
   "total_alkalinity_mg_l_1": "paramAlkalinity",
   "total_hardness_mg_l_1": "paramHardness",
   "calcium_mg_l_1": "paramCalcium",
+  "estimated_magnesium_mg_l_1": "paramEstimatedMagnesium",
   "ammonia_mg_l_1": "paramAmmonia",
   "nitrite_mg_l_1": "paramNitrite",
   "phosphorus_mg_l_1": "paramPhosphorus",
-  "hydrogen_sulfide_mg_l_1": "paramHydrogenSulfide",
-  "plankton_count_no_l_1": "paramPlanktonCount",
+  "hydrogen_sulphide_mg_l_1": "paramHydrogenSulphide",
+  "plankton_abundance_no_l_1": "paramPlanktonAbundance",
 };
 
 function getVariableLabel(label: string, keys: readonly string[], isEnglish: boolean) {
@@ -595,19 +613,17 @@ function getVariableLabel(label: string, keys: readonly string[], isEnglish: boo
   if (translationKey) {
     return t(isEnglish ? "en" : "id", translationKey);
   }
-  if (label === "Water Quality Label") return isEnglish ? "Water Quality Label" : "Label Kualitas Air";
-  if (label === "Aquaculture Suitability Tier") return isEnglish ? "Aquaculture Suitability Tier" : "Kelas Kesesuaian Budidaya";
-  if (label === "Aquaculture Suitability Description") return isEnglish ? "Aquaculture Suitability Description" : "Deskripsi Kesesuaian Budidaya";
+  if (label === "Water Quality Index") return isEnglish ? "Water Quality Index (WQI)" : "Indeks Kualitas Air (WQI)";
+  if (label === "Quality Label") return isEnglish ? "Quality Label" : "Label Kualitas";
+  if (label === "Quality Category") return isEnglish ? "Quality Category" : "Kategori Kualitas";
+  if (label === "Suitability Classification") return isEnglish ? "Aquaculture Suitability Classification" : "Klasifikasi Kesesuaian Akuakultur";
+  if (label === "Suitability Description") return isEnglish ? "Aquaculture Suitability Description" : "Deskripsi Kesesuaian Akuakultur";
   return label;
 }
 
 function getMissingValueName(name: string, isEnglish: boolean) {
   const variable = edaReportVariables.find((item) => item.label === name);
   if (variable) return getVariableLabel(variable.label, variable.keys, isEnglish);
-  if (name === "Total Alkalinity") return isEnglish ? "Total Alkalinity" : "Alkalinitas Total";
-  if (name === "Total Hardness") return isEnglish ? "Total Hardness" : "Kesadahan Total";
-  if (name === "Calcium") return isEnglish ? "Calcium" : "Kalsium";
-  if (name === "Plankton Count") return isEnglish ? "Plankton Count" : "Jumlah Plankton";
   return name;
 }
 
@@ -735,10 +751,6 @@ function getEdaValue(row: EdaRecord, keys: readonly string[]) {
   return "-";
 }
 
-function getEdaNumbers(rows: EdaRecord[], keys: readonly string[]) {
-  return rows.map((row) => Number(getEdaValue(row, keys))).filter(Number.isFinite);
-}
-
 function renderStatsTable(state: AppState) {
   const isEnglish = state.language === "en";
   const rows = edaReportVariables.filter((item) => item.type === "Numeric").map((item) => {
@@ -754,7 +766,7 @@ function renderSampleDatasetTable(rows: EdaRecord[], isEnglish: boolean) {
   if (!sampleRows.length) return `<div class="empty-chart"><strong>${isEnglish ? "No data available" : "Data tidak tersedia"}</strong><p>${isEnglish ? "Sample rows cannot be displayed because the dataset has not been loaded." : "Sampel baris belum dapat ditampilkan karena dataset belum termuat."}</p></div>`;
   return `<div class="sample-table-note">${isEnglish ? "First five rows from the loaded dataset." : "Lima baris pertama dari dataset yang termuat."}</div><div class="table-scroll sample-dataset-scroll"><table><thead><tr>${edaReportVariables.map((item) => `<th>${escapeHtml(getVariableLabel(item.label, item.keys, isEnglish))}</th>`).join("")}</tr></thead><tbody>${sampleRows.map((row) => `<tr>${edaReportVariables.map((item) => {
     const rawVal = getEdaValue(row, item.keys);
-    const isDescriptionColumn = item.keys.includes("aquaculture_suitability_description");
+    const isDescriptionColumn = (item.keys as readonly string[]).includes("wqi_derived_aquaculture_suitability_description");
     if (isDescriptionColumn && rawVal !== "-") {
       const truncated = String(rawVal).length > 25 ? String(rawVal).slice(0, 25) + "..." : String(rawVal);
       return `<td><div class="desc-cell-wrapper"><span class="desc-text-preview" title="${escapeAttribute(String(rawVal))}">${escapeHtml(truncated)}</span><button type="button" class="btn-view-desc" data-desc="${escapeAttribute(String(rawVal))}">${isEnglish ? "View" : "Lihat"}</button></div></td>`;

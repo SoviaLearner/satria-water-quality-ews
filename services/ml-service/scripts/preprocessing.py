@@ -102,9 +102,7 @@ def get_training_data(test_size: float = 0.2) -> tuple[pd.DataFrame, pd.DataFram
     cleaned = clean_data(raw)
     X, y, label_encoder = build_feature_target(cleaned)
     
-    # Mencegah data leakage (label masuk ke features)
-    if "Water Quality Label" in X.columns:
-        X = X.drop(columns=["Water Quality Label"])
+
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,

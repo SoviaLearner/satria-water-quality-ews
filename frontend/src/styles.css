@@ -903,9 +903,14 @@ button:disabled {
 
 .prediction-layout {
   display: grid;
-  grid-template-columns: minmax(560px, 1.45fr) minmax(320px, 0.95fr);
-  gap: 76px;
+  grid-template-columns: 1fr;
+  gap: 28px;
   align-items: start;
+}
+
+.prediction-section {
+  width: min(1120px, 100%);
+  margin: 0 auto 28px;
 }
 
 .model-strip {
@@ -1107,8 +1112,107 @@ button:disabled {
   font-size: 13px;
 }
 
+.file-input-shell {
+  position: relative;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: #155989;
+  color: #ffffff;
+  font-weight: 900;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.file-input-shell:hover {
+  background: #0f8f83;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15, 143, 131, 0.18);
+}
+
+.file-input-shell input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.prediction-actions label > em {
+  color: #728196;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.json-example-panel {
+  margin-top: 18px;
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.json-example-panel summary {
+  padding: 15px 18px;
+  color: #155989;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.json-example-panel summary:hover {
+  background: #f1f7fb;
+}
+
+.json-example-panel ul {
+  margin: 0;
+  padding: 0 20px 14px 38px;
+  color: #5f7187;
+  line-height: 1.65;
+}
+
+.json-example-panel pre {
+  max-height: 320px;
+  margin: 0 18px 18px;
+  padding: 18px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #0b2030;
+  color: #e8f8f5;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.json-example-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+
+.json-example-actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #e8f8f5;
+  color: #0f8f83;
+  font-weight: 900;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.json-example-actions button:hover {
+  background: #d8f4ef;
+  transform: translateY(-1px);
+}
+
 .result-panel {
-  min-height: 385px;
+  min-height: 245px;
   border: 2px dashed #d9e1ea;
   display: grid;
   place-items: center;
@@ -1184,8 +1288,8 @@ button:disabled {
 .prediction-bottom {
   margin-top: 46px;
   display: grid;
-  grid-template-columns: minmax(520px, 1.2fr) minmax(320px, 0.8fr);
-  gap: 76px;
+  grid-template-columns: 1fr;
+  gap: 28px;
 }
 
 .how-card,
@@ -1442,6 +1546,16 @@ button:disabled {
 
 .svg-chart .dashed {
   stroke-dasharray: 8 8;
+}
+
+.recent-list-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  color: #728196;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .svg-chart .axis-title {
@@ -3510,6 +3624,140 @@ button:disabled {
 
 .bar-fill:hover {
   opacity: 0.8;
+}
+
+/* Prediction page final polish */
+.prediction-page {
+  display: grid;
+  gap: 24px;
+}
+
+.prediction-page .page-heading {
+  margin-bottom: 4px;
+}
+
+.prediction-page .model-strip {
+  margin-bottom: 0;
+}
+
+.prediction-section {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.prediction-form,
+.result-panel,
+.recent-card,
+.how-card {
+  padding: 32px;
+}
+
+.prediction-form {
+  display: grid;
+  gap: 24px;
+}
+
+.prediction-form .preset-section,
+.prediction-form .prediction-actions {
+  margin: 0;
+}
+
+.parameter-grid {
+  gap: 22px;
+}
+
+.parameter-grid label {
+  align-content: start;
+}
+
+.execute-button {
+  margin-top: 4px;
+}
+
+.result-panel {
+  min-height: 220px;
+  align-items: center;
+}
+
+.result-ready h2 {
+  margin-top: 14px;
+}
+
+.recent-card,
+.how-card {
+  display: grid;
+  gap: 14px;
+}
+
+.recent-card h2,
+.how-card strong {
+  margin: 0;
+  color: #10233a;
+}
+
+.recent-list-header {
+  margin-top: 0;
+  padding: 0 4px;
+}
+
+.recent-item {
+  margin-top: 0;
+  min-height: 72px;
+}
+
+.recent-item strong,
+.recent-item span {
+  overflow-wrap: anywhere;
+}
+
+.how-card p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+  .prediction-page {
+    gap: 20px;
+  }
+
+  .prediction-form,
+  .result-panel,
+  .recent-card,
+  .how-card {
+    padding: 26px;
+  }
+}
+
+@media (max-width: 640px) {
+  .prediction-form,
+  .result-panel,
+  .recent-card,
+  .how-card {
+    padding: 20px;
+  }
+
+  .preset-header,
+  .recent-item,
+  .recent-list-header {
+    align-items: flex-start;
+  }
+
+  .preset-header,
+  .recent-item {
+    flex-direction: column;
+  }
+
+  .preset-buttons,
+  .json-example-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .preset-btn,
+  .json-example-actions button,
+  .file-input-shell {
+    width: 100%;
+  }
 }
 
 /* Chart Help Text */

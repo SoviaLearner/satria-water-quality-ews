@@ -14,12 +14,14 @@ import { supabase } from "./services/supabase";
 import { state } from "./state";
 import type { AppPage } from "./types";
 import { renderApp } from "./views/appView";
+import { t } from "./utils/translations";
 import "./styles.css";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 const TEMPORARY_RESET_PASSWORD = "12345678";
 const TEMPORARY_RESET_EMAIL_KEY = "satria_temporary_reset_email";
+const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
 
 if (!app) {
   throw new Error("Root app element tidak ditemukan.");
@@ -44,6 +46,8 @@ function bindEvents() {
     setTimeout(() => handlePredictionFormInput(event), 0);
   });
   document.querySelector("#bulkPredictionFile")?.addEventListener("change", handleBulkPredictionUpload);
+  document.querySelector("#copyJsonExample")?.addEventListener("click", handleCopyJsonExample);
+  document.querySelector("#downloadSampleJson")?.addEventListener("click", handleDownloadSampleJson);
   document.querySelector("#downloadReportsCsv")?.addEventListener("click", handleDownloadReportsCsv);
   document.querySelector("#profileForm")?.addEventListener("submit", handleProfileSave);
   document.querySelector("#securityForm")?.addEventListener("submit", handleSecuritySave);
@@ -217,7 +221,7 @@ async function handlePredictionSubmit(event: Event) {
   });
 
   if (Object.values(payload).some((value) => !Number.isFinite(value))) {
-    state.message = "Semua parameter prediksi harus berupa angka valid.";
+    state.message = label("invalidPredictionParams");
     render();
     return;
   }
@@ -230,7 +234,7 @@ async function handlePredictionSubmit(event: Event) {
     state.latestPrediction = await runPrediction(payload, state.session?.access_token || null);
     state.predictionLogs = await loadPredictionLogs(state.session);
   } catch (error) {
-    state.message = error instanceof Error ? error.message : "Prediksi gagal.";
+    state.message = error instanceof Error ? error.message : label("predictionFailed");
   }
 
   state.loading = false;
@@ -264,7 +268,7 @@ async function handleBulkPredictionUpload(event: Event) {
     const parsed = JSON.parse(await file.text());
     const rows = Array.isArray(parsed) ? parsed : parsed.data;
     if (!Array.isArray(rows) || !rows.length) {
-      throw new Error("File JSON harus berisi array data prediksi.");
+      throw new Error(label("invalidJsonArray"));
     }
 
     const payload = rows.map((row) => {
@@ -273,7 +277,7 @@ async function handleBulkPredictionUpload(event: Event) {
         record[name] = Number(row[name]);
       });
       if (Object.values(record).some((value) => !Number.isFinite(value))) {
-        throw new Error("Semua item JSON harus memakai field parameter API yang valid.");
+        throw new Error(label("invalidJsonFields"));
       }
       return record;
     });
@@ -281,9 +285,9 @@ async function handleBulkPredictionUpload(event: Event) {
     const results = await runBatchPrediction(payload, state.session?.access_token || null);
     state.latestPrediction = results[0] || null;
     state.predictionLogs = await loadPredictionLogs(state.session);
-    state.message = `${results.length} prediksi dari JSON berhasil diproses dan disimpan.`;
+    state.message = `${results.length} ${label("bulkPredictionSuccess")}`;
   } catch (error) {
-    state.message = error instanceof Error ? error.message : "Bulk prediction gagal.";
+    state.message = error instanceof Error ? error.message : label("bulkPredictionFailed");
   }
 
   state.loading = false;
@@ -338,6 +342,36 @@ async function handleForgotPassword() {
   }
 
   state.loading = false;
+  render();
+}
+
+function getPredictionJsonExample() {
+  const row = predictionFields.reduce<Record<string, number>>((acc, [name, , example]) => {
+    acc[name] = example;
+    return acc;
+  }, {});
+  return JSON.stringify([row], null, 2);
+}
+
+async function handleCopyJsonExample() {
+  const json = getPredictionJsonExample();
+  try {
+    await navigator.clipboard.writeText(json);
+    state.message = label("jsonCopied");
+  } catch {
+    state.message = json;
+  }
+  render();
+}
+
+function handleDownloadSampleJson() {
+  const url = URL.createObjectURL(new Blob([getPredictionJsonExample()], { type: "application/json;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "sample.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  state.message = label("jsonDownloaded");
   render();
 }
 

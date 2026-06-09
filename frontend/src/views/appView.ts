@@ -319,50 +319,70 @@ function renderHomeFooter(state: AppState) {
 }
 
 function renderPredictionPage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const modelName = state.modelInfo?.model_name || "LightGBM";
+  const jsonExample = buildPredictionJsonExample();
   return `
     <section class="work-page prediction-page">
-      <div class="page-heading"><h1>Manual Parameter Input</h1><p>Enter current water quality metrics to get a real-time health classification from the LightGBM model.</p></div>
+      <div class="page-heading"><h1>${label("predictionPageTitle")}</h1><p>${label("predictionPageSubtitle")}</p></div>
       <div class="model-strip">
-        <div><span>Active Model</span><strong>${escapeHtml(modelName.toUpperCase())}</strong></div>
-        <div><span>Input Features</span><strong>${state.modelInfo?.features?.length || predictionFields.length}</strong></div>
-        <div><span>Prediction Classes</span><strong>${state.modelInfo?.classes?.length || 3}</strong></div>
+        <div><span>${label("modelStripActiveModel")}</span><strong>${escapeHtml(modelName.toUpperCase())}</strong></div>
+        <div><span>${label("modelStripInputFeatures")}</span><strong>${state.modelInfo?.features?.length || predictionFields.length}</strong></div>
+        <div><span>${label("modelStripClasses")}</span><strong>${state.modelInfo?.classes?.length || 3}</strong></div>
       </div>
-      <div class="prediction-layout">
-        <form class="prediction-form" id="predictionForm">
-          <div class="preset-section">
-            <div class="preset-header">
-              <span class="preset-title">DEMO PRESETS (SATU-KLIK ISI OTOMATIS)</span>
-              <button type="reset" class="preset-reset-btn">Reset Form</button>
-            </div>
-            <div class="preset-buttons">
-              <button type="button" class="preset-btn optimal" data-preset="optimal">Air Ideal (Optimal)</button>
-              <button type="button" class="preset-btn moderate" data-preset="moderate">Air Stress (Sedang)</button>
-              <button type="button" class="preset-btn critical" data-preset="critical">Air Bahaya (Kritis)</button>
-            </div>
+      <form class="prediction-form prediction-section" id="predictionForm">
+        <div class="preset-section">
+          <div class="preset-header">
+            <span class="preset-title">${label("demoPresets")}</span>
+            <button type="reset" class="preset-reset-btn">${label("resetForm")}</button>
           </div>
-          <div class="parameter-grid">${predictionFields.map(([name, label, example]) => `<label><span>${label}</span><small>Cara format: isi angka saja, gunakan titik untuk desimal.</small><input name="${name}" type="number" step="any" placeholder="Contoh: ${example}" required /><em class="input-error">Inputan yang dilakukan harus sesuai dengan format petunjuk di atas!</em></label>`).join("")}</div><button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? "Running..." : "Execute ML Model Prediction"}</button><div class="prediction-actions"><label><span>Upload JSON Batch</span><small>File harus berisi array object dengan nama field API yang sama seperti form.</small><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></label></div>${state.message ? `<div class="message">${state.message}</div>` : ""}</form>
-        <aside class="result-panel">${state.latestPrediction ? renderPredictionResult(state) : `<div class="empty-result"><strong>Results will appear here</strong><span>after calculation</span></div>`}</aside>
-      </div>
-      <div class="prediction-bottom"><article class="how-card"><strong>How it works</strong><p>The SATRIA model analyzes 14 parameters against the cleaned aquaculture dataset and stores user prediction logs to Supabase.</p><p>Jika hasil sering Reduced, cek ammonia, nitrite, phosphorus, hydrogen sulfide, dan plankton count. Model mengikuti pola dataset training, bukan aturan manual sederhana.</p></article><article class="recent-card"><h2>Recent Tests</h2>${renderRecentList(state.predictionLogs.slice(0, 2))}</article></div>
+          <div class="preset-buttons">
+            <button type="button" class="preset-btn optimal" data-preset="optimal">${label("presetOptimal")} (${label("statusOptimal")})</button>
+            <button type="button" class="preset-btn moderate" data-preset="moderate">${label("presetModerate")} (${label("statusModerate")})</button>
+            <button type="button" class="preset-btn critical" data-preset="critical">${label("presetCritical")} (${label("statusReduced")})</button>
+          </div>
+        </div>
+        <div class="parameter-grid">${predictionFields.map(([name, , example]) => `<label><span>${escapeHtml(predictionFieldLabel(name, state.language))}</span><small>${label("inputFormatHint")}</small><input name="${name}" type="number" step="any" placeholder="${label("sample")}: ${example}" required /><em class="input-error">${label("inputFormatError")}</em></label>`).join("")}</div>
+        <button class="execute-button" id="executePrediction" type="submit" disabled>${state.loading ? label("running") : label("executePrediction")}</button>
+        <div class="prediction-actions">
+          <label><span>${label("uploadJsonBatch")}</span><small>${label("uploadJsonHelp")}</small><span class="file-input-shell"><span>${label("chooseFile")}</span><input id="bulkPredictionFile" type="file" accept="application/json" ${state.loading ? "disabled" : ""} /></span><em>${label("noFileChosen")}</em></label>
+          <details class="json-example-panel">
+            <summary>${label("viewJsonExample")}</summary>
+            <ul>
+              <li>${label("jsonGuideDecimal")}</li>
+              <li>${label("jsonGuideArray")}</li>
+              <li>${label("jsonGuideFields")}</li>
+              <li>${label("jsonGuideMultiple")}</li>
+            </ul>
+            <pre id="predictionJsonExample">${escapeHtml(jsonExample)}</pre>
+            <div class="json-example-actions"><button type="button" id="copyJsonExample">${label("copyExample")}</button><button type="button" id="downloadSampleJson">${label("downloadSampleJson")}</button></div>
+          </details>
+        </div>
+        ${state.message ? `<div class="message">${escapeHtml(state.message)}</div>` : ""}
+      </form>
+      <aside class="result-panel prediction-section">${state.latestPrediction ? renderPredictionResult(state) : `<div class="empty-result"><strong>${label("resultsWillAppear")}</strong><span>${label("afterCalculation")}</span></div>`}</aside>
+      <article class="recent-card prediction-section"><h2>${label("recentTests")}</h2>${renderRecentList(state.predictionLogs.slice(0, 3), state)}</article>
+      <article class="how-card prediction-section"><strong>${label("howItWorks")}</strong><p>${label("howItWorksBody1")}</p><p>${label("howItWorksBody2")}</p></article>
     </section>
   `;
 }
 
 function renderPredictionResult(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const result = state.latestPrediction!;
-  return `<div class="result-ready"><span class="result-badge">${escapeHtml(result.predicted_suitability_tier)}</span><h2>${escapeHtml(result.predicted_suitability_tier)}</h2><p>Class ID: ${result.predicted_class_id}</p>${renderRecommendation(result.predicted_suitability_tier)}${Object.entries(result.probabilities).map(([key, value]) => `<div class="prob-row"><span>${escapeHtml(key)}</span><strong>${(value * 100).toFixed(2)}%</strong></div>`).join("")}<button class="report-link-button" type="button" data-page="reports">Lihat Laporan Lengkap</button></div>`;
+  return `<div class="result-ready"><span class="result-badge">${escapeHtml(translateStatus(result.predicted_suitability_tier, state.language))}</span><h2>${label("predictionResult")}</h2><p>${label("classId")}: ${result.predicted_class_id}</p>${renderRecommendation(result.predicted_suitability_tier, state)}${Object.entries(result.probabilities).map(([key, value]) => `<div class="prob-row"><span>${escapeHtml(translateStatus(key, state.language))}</span><strong>${(value * 100).toFixed(2)}%</strong></div>`).join("")}<button class="report-link-button" type="button" data-page="reports">${label("viewFullReport")}</button></div>`;
 }
 
-function renderRecommendation(tier: string) {
+function renderRecommendation(tier: string, state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const normalized = tier.toLowerCase();
   const tone = normalized.includes("optimal") ? "optimal" : normalized.includes("moderate") ? "moderate" : "unsafe";
   const message = normalized.includes("optimal")
-    ? "Kondisi air optimal. Pertahankan monitoring rutin dan hindari perubahan parameter mendadak."
+    ? label("recommendationOptimal")
     : normalized.includes("moderate")
-      ? "Kondisi air cukup baik, tetapi perlu pemantauan pH, DO, nitrite, dan ammonia sebelum pemberian pakan berikutnya."
-      : "Kondisi air berisiko. Segera lakukan aerasi, penggantian air parsial, dan pengecekan senyawa toksik.";
-  return `<article class="recommendation-card ${tone}"><strong>Rekomendasi Tindakan</strong><p>${escapeHtml(message)}</p></article>`;
+      ? label("recommendationModerate")
+      : label("recommendationUnsafe");
+  return `<article class="recommendation-card ${tone}"><strong>${label("recommendationTitle")}</strong><p>${escapeHtml(message)}</p></article>`;
 }
 
 function renderAnalyticsPage(state: AppState) {
@@ -385,8 +405,26 @@ function parameterTranslationKey(key: string): Parameters<typeof t>[1] {
     phosphorus_mg_l_1: "paramPhosphorus",
     total_hardness_mg_l_1: "paramHardness",
     total_alkalinity_mg_l_1: "paramAlkalinity",
+    turbidity_cm: "paramTurbidity",
+    biochemical_oxygen_demand_mg_l: "paramBod",
+    carbon_dioxide_co2: "paramCarbonDioxide",
+    calcium_mg_l_1: "paramCalcium",
+    hydrogen_sulfide_mg_l_1: "paramHydrogenSulfide",
+    plankton_count_no_l_1: "paramPlanktonCount",
   };
   return map[key] || "valueAxis";
+}
+
+function predictionFieldLabel(key: string, language: AppState["language"]) {
+  return t(language, parameterTranslationKey(key));
+}
+
+function buildPredictionJsonExample() {
+  const row = predictionFields.reduce<Record<string, number>>((acc, [name, , example]) => {
+    acc[name] = example;
+    return acc;
+  }, {});
+  return JSON.stringify([row], null, 2);
 }
 
 function translateStatus(status: string, language: AppState["language"]) {
@@ -455,7 +493,8 @@ function renderSecurityPanel(state: AppState, fullName: string, email: string) {
   return `<form class="profile-card" id="securityForm"><h2>Security & Privacy</h2>${temporaryNotice}<div class="profile-form-grid"><label><span>Username / Display Name</span><input name="securityFullName" value="${escapeAttribute(fullName)}" required /></label><label><span>Login Email</span><input value="${escapeAttribute(email)}" disabled /></label><label><span>New Password</span><input name="newPassword" type="password" minlength="6" placeholder="Kosongkan jika tidak diganti" /></label><label><span>Confirm Password</span><input name="confirmPassword" type="password" minlength="6" placeholder="Ulangi password baru" /></label><label class="wide privacy-check"><input type="checkbox" checked /><span>Allow SATRIA to show my name on prediction reports for this account.</span></label></div><button class="save-button" type="submit" ${state.loading ? "disabled" : ""}>${state.loading ? "Saving..." : "Save Security"}</button>${state.message ? `<div class="message settings-message">${state.message}</div>` : ""}</form>`;
 }
 
-function renderRecentList(rows: PredictionLog[]) {
-  if (!rows.length) return `<p class="empty-small">Belum ada recent test.</p>`;
-  return rows.map((row) => `<div class="recent-item"><div><strong>${formatDate(row.created_at)}</strong><span>${escapeHtml(row.predicted_suitability_tier)}</span></div><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(row.predicted_suitability_tier)}</span></div>`).join("");
+function renderRecentList(rows: PredictionLog[], state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
+  if (!rows.length) return `<p class="empty-small">${label("noPredictionLogs")}</p>`;
+  return `<div class="recent-list-header"><span>${label("dateTime")}</span><span>${label("status")}</span></div>${rows.map((row) => `<div class="recent-item"><div><strong>${formatDate(row.created_at)}</strong><span>${label("predictionHistory")}</span></div><span class="status-pill ${statusClass(row.predicted_suitability_tier)}">${escapeHtml(translateStatus(row.predicted_suitability_tier, state.language))}</span></div>`).join("")}`;
 }

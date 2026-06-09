@@ -54,6 +54,10 @@ const parameterTranslationKeys: Record<string, Parameters<typeof t>[1]> = {
   phosphorus_mg_l_1: "paramPhosphorus",
   total_hardness_mg_l_1: "paramHardness",
   total_alkalinity_mg_l_1: "paramAlkalinity",
+  estimated_magnesium_mg_l_1: "paramEstimatedMagnesium",
+  carbon_dioxide_mg_l: "paramCarbonDioxide",
+  hydrogen_sulphide_mg_l_1: "paramHydrogenSulphide",
+  plankton_abundance_no_l_1: "paramPlanktonAbundance",
 };
 
 function label(language: Language, key: Parameters<typeof t>[1]) {
@@ -69,6 +73,18 @@ function parameterLabel(key: string, language: Language) {
 
 function translatedStatus(status: string, language: Language) {
   const normalized = status.toLowerCase();
+  if (normalized.includes("highly suitable")) {
+    return language === "en" ? "Highly Suitable" : "Sangat Sesuai";
+  }
+  if (normalized.includes("unsuitable") || normalized.includes("critical")) {
+    return language === "en" ? "Unsuitable / Critical" : "Tidak Sesuai / Kritis";
+  }
+  if (normalized.includes("suitable")) {
+    return language === "en" ? "Suitable" : "Sesuai";
+  }
+  if (normalized.includes("restricted") || normalized.includes("stressed")) {
+    return language === "en" ? "Restricted / Stressed" : "Terbatas / Stres";
+  }
   if (normalized.includes("optimal")) return label(language, "statusOptimal");
   if (normalized.includes("moderate")) return label(language, "statusModerate");
   if (normalized.includes("reduced")) return label(language, "statusReduced");
@@ -88,8 +104,7 @@ export function renderMetricTabs(activeKey: string, group: "eda" | "analytics", 
 export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondaryKey = "temperature", language: Language = "id") {
   const primary = values(rows, primaryKey);
   const secondary = values(rows, secondaryKey);
-  const primaryMeta = numericParameters.find((item) => item.key === primaryKey);
-  const secondaryMeta = numericParameters.find((item) => item.key === secondaryKey);
+
   if (primary.length < 2) {
     return renderEmptyChart(label(language, "emptyTrendTitle"), label(language, "emptyTrendMessage"));
   }
@@ -207,22 +222,48 @@ export function renderDonut(logs: PredictionLog[], language: Language = "id") {
     return acc;
   }, {});
   const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-  const optimal = ((counts["Optimal Suitability"] || 0) / total) * 100;
-  const moderate = ((counts["Moderate Suitability"] || 0) / total) * 100;
-  const moderateEnd = optimal + moderate;
+
+  const colors: Record<string, string> = {
+    "Highly Suitable": "#0fb5a5",
+    "Suitable": "#ffc700",
+    "Restricted / Stressed": "#ff7a59",
+    "Unsuitable / Critical": "#ef4444"
+    // "Optimal Suitability": "#0fb5a5",
+    // "Moderate Suitability": "#ffc700",
+    // "Reduced Suitability": "#ff7a59",
+  };
+
+  let cumulative = 0;
+  const gradientParts: string[] = [];
+  const entries = Object.entries(counts);
+
+  entries.forEach(([status, count]) => {
+    const pct = (count / total) * 100;
+    const color = colors[status] || "#64748b";
+    gradientParts.push(`${color} ${cumulative.toFixed(1)}% ${(cumulative + pct).toFixed(1)}%`);
+    cumulative += pct;
+  });
+
+  const donutBg = gradientParts.length ? `conic-gradient(${gradientParts.join(", ")})` : "var(--border-color)";
 
   return `
-    <div class="donut" style="--donut-bg:conic-gradient(#0fb5a5 0 ${optimal}%, #ffc700 ${optimal}% ${moderateEnd}%, #ff7a59 ${moderateEnd}% 100%)"></div>
+    <div class="donut" style="--donut-bg:${donutBg}"></div>
     <p class="chart-help centered">${escapeHtml(label(language, "donutChartHelp"))}</p>
     <div class="donut-legend">
-      ${Object.entries(counts).map(([status, count]) => `<span class="${statusClass(status)}" title="${escapeHtml(translatedStatus(status, language))}: ${count}">${escapeHtml(translatedStatus(status, language))}: ${count}</span>`).join("") || `<span>${escapeHtml(label(language, "noPredictionLogs"))}</span>`}
+      ${entries.map(([status, count]) => `<span class="${statusClass(status)}" title="${escapeHtml(translatedStatus(status, language))}: ${count}"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:${colors[status] || "#64748b"};margin-right:6px;"></i>${escapeHtml(translatedStatus(status, language))}: ${count}</span>`).join("") || `<span>${escapeHtml(label(language, "noPredictionLogs"))}</span>`}
     </div>
   `;
 }
 
 export function renderDatasetClassDistribution(rows: EdaRecord[]) {
   const counts = rows.reduce<Record<string, number>>((acc, row) => {
-    const label = String(row.aquaculture_suitability_tier || row.water_quality_label || "Unknown");
+    const label = String(
+      row.wqi_derived_aquaculture_suitability_classification ||
+      row.wqi_derived_quality_label ||
+      row.aquaculture_suitability_tier ||
+      row.water_quality_label ||
+      "Unknown"
+    );
     acc[label] = (acc[label] || 0) + 1;
     return acc;
   }, {});
@@ -283,7 +324,7 @@ function renderBoxRow(rows: EdaRecord[], key: string) {
   return `<span title="${escapeHtml(meta?.label || key)} min ${min.toFixed(2)} max ${max.toFixed(2)}" style="--w:${width}%;--x:${x}%"><b>${escapeHtml(meta?.label || key)}</b><em>${outliers} outlier | IQR ${iqr.toFixed(3)}</em></span>`;
 }
 
-export function renderOutlierGuidance(rows: EdaRecord[], keys = numericParameters.slice(0, 6).map((item) => item.key)) {
+export function renderOutlierGuidance(rows: EdaRecord[], keys: string[] = numericParameters.slice(0, 6).map((item) => item.key as string)) {
   const summary = keys.map((key) => getOutlierSummary(rows, key)).filter((item) => item.count > 0);
   const highest = summary.sort((a, b) => b.count - a.count)[0];
 
@@ -308,8 +349,8 @@ export function renderRiskFlagSummary(rows: EdaRecord[]) {
     { key: "dissolved_oxygen_mg_l", label: "DO rendah", test: (value: number) => value < 4 },
     { key: "ammonia_mg_l_1", label: "Ammonia tinggi", test: (value: number) => value > 0.05 },
     { key: "nitrite_mg_l_1", label: "Nitrite tinggi", test: (value: number) => value > 0.2 },
-    { key: "hydrogen_sulfide_mg_l_1", label: "H2S terdeteksi", test: (value: number) => value > 0.02 },
-    { key: "plankton_count_no_l_1", label: "Plankton ekstrem", test: (value: number) => value > 100000 },
+    { key: "hydrogen_sulphide_mg_l_1", label: "H2S terdeteksi", test: (value: number) => value > 0.02 },
+    { key: "plankton_abundance_no_l_1", label: "Plankton ekstrem", test: (value: number) => value > 5000 },
   ];
   const total = Math.max(rows.length, 1);
 
@@ -347,10 +388,6 @@ function getOutlierSummary(rows: EdaRecord[], key: string) {
   };
 }
 
-function shortLabel(key: string) {
-  const meta = numericParameters.find((item) => item.key === key);
-  return meta?.label || key.replaceAll("_", " ");
-}
 
 function renderChartStats(nums: number[], unit = "", language: Language = "id") {
   const { min, max } = extent(nums);

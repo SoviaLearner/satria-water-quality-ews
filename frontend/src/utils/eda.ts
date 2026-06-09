@@ -23,19 +23,20 @@ const fieldAliases = {
 const waterQualityParams = [
   { key: "temperature", label: "Temperature", unit: "°C", type: "numeric" },
   { key: "ph", label: "pH", unit: "", type: "numeric" },
-  { key: "dissolved_oxygen_mg_l", label: "Dissolved Oxygen", unit: "mg/L", type: "numeric" },
-  { key: "ammonia_mg_l_1", label: "Ammonia", unit: "mg/L", type: "numeric" },
-  { key: "nitrite_mg_l_1", label: "Nitrite", unit: "mg/L", type: "numeric" },
-  { key: "phosphorus_mg_l_1", label: "Phosphorus", unit: "mg/L", type: "numeric" },
-  { key: "hydrogen_sulfide_mg_l_1", label: "Hydrogen Sulfide", unit: "mg/L", type: "numeric" },
+  { key: "dissolved_oxygen_mg_l", label: "Dissolved Oxygen", unit: "mg L-1", type: "numeric" },
+  { key: "ammonia_mg_l_1", label: "Ammonia", unit: "mg L-1", type: "numeric" },
+  { key: "nitrite_mg_l_1", label: "Nitrite", unit: "mg L-1", type: "numeric" },
+  { key: "phosphorus_mg_l_1", label: "Phosphorus", unit: "mg L-1", type: "numeric" },
+  { key: "hydrogen_sulphide_mg_l_1", label: "Hydrogen Sulphide", unit: "mg L-1", type: "numeric" },
   { key: "turbidity_cm", label: "Turbidity", unit: "cm", type: "numeric" },
-  { key: "carbon_dioxide_mg_l_1", label: "CO₂", unit: "mg/L", type: "numeric" },
-  { key: "biochemical_oxygen_demand_mg_l", label: "BOD", unit: "mg/L", type: "numeric" },
-  { key: "total_alkalinity_mg_l_1", label: "Total Alkalinity", unit: "mg/L", type: "numeric" },
-  { key: "total_hardness_mg_l_1", label: "Total Hardness", unit: "mg/L", type: "numeric" },
-  { key: "calcium_mg_l_1", label: "Calcium", unit: "mg/L", type: "numeric" },
-  { key: "plankton_count_no_l_1", label: "Plankton Count", unit: "No/L", type: "numeric" },
-  { key: "aquaculture_suitability_tier", label: "Suitability Tier", unit: "", type: "categorical" },
+  { key: "carbon_dioxide_mg_l", label: "Carbon Dioxide", unit: "mg L-1", type: "numeric" },
+  { key: "biochemical_oxygen_demand_mg_l", label: "BOD", unit: "mg L-1", type: "numeric" },
+  { key: "total_alkalinity_mg_l_1", label: "Total Alkalinity", unit: "mg L-1 as CaCO3", type: "numeric" },
+  { key: "total_hardness_mg_l_1", label: "Total Hardness", unit: "mg L-1 as CaCO3", type: "numeric" },
+  { key: "calcium_mg_l_1", label: "Calcium", unit: "mg L-1", type: "numeric" },
+  { key: "estimated_magnesium_mg_l_1", label: "Estimated Magnesium", unit: "mg L-1", type: "numeric" },
+  { key: "plankton_abundance_no_l_1", label: "Plankton Abundance", unit: "No. L-1", type: "numeric" },
+  { key: "wqi_derived_aquaculture_suitability_classification", label: "Suitability Classification", unit: "", type: "categorical" },
 ];
 
 function mean(values: number[]): number {
@@ -238,7 +239,7 @@ export function renderDataInfoTable(rows: EdaRecord[]): string {
 
 export function renderCorrelationHeatmap(rows: EdaRecord[]): string {
   const numericKeys = waterQualityParams
-    .filter(p => p.type === "numeric" && p.key !== "aquaculture_suitability_tier")
+    .filter(p => p.type === "numeric")
     .map(p => p.key)
     .slice(0, 8);
   
@@ -362,7 +363,7 @@ export function renderOutlierAnalysis(rows: EdaRecord[], language: Language = "i
   if (!rows.length) {
     return `<div class="empty-chart"><strong>${isEnglish ? "No data available" : "Data tidak tersedia"}</strong><p>${isEnglish ? "Outlier analysis requires loaded dataset rows." : "Analisis outlier memerlukan baris dataset yang sudah termuat."}</p></div>`;
   }
-  const numericParams = waterQualityParams.filter(p => p.type === "numeric" && p.key !== "aquaculture_suitability_tier");
+  const numericParams = waterQualityParams.filter(p => p.type === "numeric");
 
   const paramOutliers = numericParams.map(param => {
     const values = getNumericColumn(rows, [param.key]).sort((a, b) => a - b);
@@ -389,10 +390,11 @@ export function renderOutlierAnalysis(rows: EdaRecord[], language: Language = "i
       param.key === "total_alkalinity_mg_l_1" ? "Alkalinitas" :
       param.key === "turbidity_cm" ? "Kekeruhan" :
       param.key === "biochemical_oxygen_demand_mg_l" ? "BOD / Bahan Organik" :
-      param.key === "carbon_dioxide_co2" || param.key === "carbon_dioxide_mg_l_1" ? "Karbon Dioksida" :
+      param.key === "carbon_dioxide_mg_l" ? "Karbon Dioksida" :
       param.key === "calcium_mg_l_1" ? "Kalsium" :
-      param.key === "hydrogen_sulfide_mg_l_1" ? "Hidrogen Sulfida" :
-      param.key === "plankton_count_no_l_1" ? "Jumlah Plankton" :
+      param.key === "estimated_magnesium_mg_l_1" ? "Magnesium (Estimasi)" :
+      param.key === "hydrogen_sulphide_mg_l_1" ? "Hidrogen Sulfida" :
+      param.key === "plankton_abundance_no_l_1" ? "Kelimpahan Plankton" :
       param.label
     );
 
@@ -454,11 +456,12 @@ export function renderOutlierAnalysis(rows: EdaRecord[], language: Language = "i
   `;
 }
 
-export function renderClassDistribution(rows: EdaRecord[], language: Language = "id"): string {
+export function renderClassDistribution(_rows: EdaRecord[], language: Language = "id"): string {
   const data = [
-    { tier: "Reduced Suitability", count: 1500, pct: 34.88, color: "#ff7a59" },
-    { tier: "Moderate Suitability", count: 1400, pct: 32.56, color: "#ffc700" },
-    { tier: "Optimal Suitability", count: 1400, pct: 32.56, color: "#0fb5a5" },
+    { tier: "Highly Suitable", count: 2800, pct: 65.12, color: "#0fb5a5" },
+    { tier: "Restricted / Stressed", count: 1291, pct: 30.02, color: "#ff7a59" },
+    { tier: "Suitable", count: 192, pct: 4.47, color: "#ffc700" },
+    { tier: "Unsuitable / Critical", count: 17, pct: 0.40, color: "#ef4444" },
   ];
 
   data.sort((a, b) => b.count - a.count);
@@ -483,9 +486,10 @@ export function renderClassDistribution(rows: EdaRecord[], language: Language = 
         <div class="class-legend-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 8px;">
           ${data.map(({ tier, count, pct, color }) => {
             const displayTierName = isEnglish ? tier : (
-              tier === "Optimal Suitability" ? "Sesuai Optimal" :
-              tier === "Moderate Suitability" ? "Cukup Sesuai" :
-              "Kurang Sesuai"
+              tier === "Highly Suitable" ? "Sangat Sesuai" :
+              tier === "Suitable" ? "Sesuai" :
+              tier === "Restricted / Stressed" ? "Terbatas / Stres" :
+              "Tidak Sesuai / Kritis"
             );
             return `
               <div class="class-legend-card" style="border-left: 4px solid ${color}; padding: 8px 12px; background: #f8fafc; border-radius: 4px 8px 8px 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">

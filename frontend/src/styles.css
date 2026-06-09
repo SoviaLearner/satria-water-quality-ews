@@ -1003,22 +1003,27 @@ button:disabled {
   transition: all 0.2s;
 }
 
-.preset-btn.optimal {
+.preset-btn.highly-suitable {
   border-color: #059669;
   color: #059669;
 }
-.preset-btn.moderate {
+.preset-btn.suitable {
+  border-color: #0fb5a5;
+  color: #0fb5a5;
+}
+.preset-btn.restricted-stressed {
   border-color: #d97706;
   color: #d97706;
 }
-.preset-btn.critical {
+.preset-btn.unsuitable-critical {
   border-color: #dc2626;
   color: #dc2626;
 }
 
-.preset-btn.optimal:hover { background: #ecfdf5; }
-.preset-btn.moderate:hover { background: #fffbeb; }
-.preset-btn.critical:hover { background: #fef2f2; }
+.preset-btn.highly-suitable:hover { background: #ecfdf5; }
+.preset-btn.suitable:hover { background: #f0fdfa; }
+.preset-btn.restricted-stressed:hover { background: #fffbeb; }
+.preset-btn.unsuitable-critical:hover { background: #fef2f2; }
 .parameter-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

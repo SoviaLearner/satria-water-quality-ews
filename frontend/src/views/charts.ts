@@ -228,10 +228,10 @@ export function renderDonut(logs: PredictionLog[], language: Language = "id") {
     "Highly Suitable": "#0fb5a5",
     "Suitable": "#ffc700",
     "Restricted / Stressed": "#ff7a59",
-    "Unsuitable / Critical": "#ef4444",
-    "Optimal Suitability": "#0fb5a5",
-    "Moderate Suitability": "#ffc700",
-    "Reduced Suitability": "#ff7a59",
+    "Unsuitable / Critical": "#ef4444"
+    // "Optimal Suitability": "#0fb5a5",
+    // "Moderate Suitability": "#ffc700",
+    // "Reduced Suitability": "#ff7a59",
   };
 
   let cumulative = 0;

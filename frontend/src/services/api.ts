@@ -60,3 +60,18 @@ export async function loadModelInfo() {
     return null;
   }
 }
+
+export async function requestTemporaryPasswordReset(email: string) {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || "Reset password gagal diproses.");
+  }
+
+  return String(data.message || "Password berhasil di-reset. Silakan login menggunakan password sementara: 12345678.");
+}

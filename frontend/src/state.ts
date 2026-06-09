@@ -16,6 +16,7 @@ export const state: AppState = {
   edaRows: [],
   edaTotalRows: 0,
   userRiskCount: 0,
+  temporaryPasswordReset: false,
   realtimeConnected: false,
   edaMetric: "ph",
   analyticsMetric: "dissolved_oxygen_mg_l",

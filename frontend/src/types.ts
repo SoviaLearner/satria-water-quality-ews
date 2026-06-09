@@ -53,6 +53,7 @@ export type AppState = {
   edaRows: EdaRecord[];
   edaTotalRows: number;
   userRiskCount: number;
+  temporaryPasswordReset: boolean;
   realtimeConnected: boolean;
   edaMetric: string;
   analyticsMetric: string;

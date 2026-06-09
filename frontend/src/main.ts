@@ -1,6 +1,6 @@
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { demoPresets, predictionFields } from "./constants";
-import { loadModelInfo, runBatchPrediction, runPrediction } from "./services/api";
+import { loadModelInfo, requestTemporaryPasswordReset, runBatchPrediction, runPrediction } from "./services/api";
 import {
   loadEdaRowCount,
   loadEdaRows,
@@ -18,6 +18,8 @@ import "./styles.css";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+const TEMPORARY_RESET_PASSWORD = "12345678";
+const TEMPORARY_RESET_EMAIL_KEY = "satria_temporary_reset_email";
 
 if (!app) {
   throw new Error("Root app element tidak ditemukan.");
@@ -192,6 +194,17 @@ async function handleAuthSubmit(event: Event) {
 
   state.session = response.data.session;
   await refreshUserData();
+  if (
+    state.authMode === "login" &&
+    password === TEMPORARY_RESET_PASSWORD &&
+    localStorage.getItem(TEMPORARY_RESET_EMAIL_KEY) === email.toLowerCase()
+  ) {
+    state.temporaryPasswordReset = true;
+    state.currentPage = "settings";
+    state.settingsTab = "security";
+    state.message =
+      "Anda login menggunakan password sementara hasil reset. Demi keamanan akun, segera ubah password Anda melalui form Change Password di bawah ini.";
+  }
   render();
 }
 
@@ -313,17 +326,18 @@ async function handleForgotPassword() {
     return;
   }
 
-  const redirectTo = `${window.location.origin}${window.location.pathname}?reset-password=1`;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-  if (error) {
-    if (error.message.toLowerCase().includes("rate limit")) {
-      state.message = "Limit email tercapai (maks 3/jam dari Supabase). Tunggu beberapa saat atau gunakan custom SMTP.";
-    } else {
-      state.message = error.message;
-    }
-  } else {
-    state.message = "Link reset password dikirim ke email kamu.";
+  state.loading = true;
+  state.message = "";
+  render();
+
+  try {
+    state.message = await requestTemporaryPasswordReset(email);
+    localStorage.setItem(TEMPORARY_RESET_EMAIL_KEY, email.toLowerCase());
+  } catch (error) {
+    state.message = error instanceof Error ? error.message : "Reset password gagal diproses.";
   }
+
+  state.loading = false;
   render();
 }
 
@@ -401,14 +415,20 @@ async function handleProfileSave(event: Event) {
 async function handleSecuritySave(event: Event) {
   event.preventDefault();
   if (!state.session) return;
+  const formData = new FormData(event.currentTarget as HTMLFormElement);
+  const password = String(formData.get("newPassword") || "");
 
   state.loading = true;
   state.message = "";
   render();
 
   try {
-    const profile = await saveSecuritySettings(state.session, new FormData(event.currentTarget as HTMLFormElement));
+    const profile = await saveSecuritySettings(state.session, formData);
     state.profile = profile || (await loadProfile(state.session));
+    if (password && state.temporaryPasswordReset) {
+      localStorage.removeItem(TEMPORARY_RESET_EMAIL_KEY);
+      state.temporaryPasswordReset = false;
+    }
     state.message = "Security & Privacy berhasil diperbarui.";
   } catch (error) {
     state.message = error instanceof Error ? error.message : "Security & Privacy gagal disimpan.";
@@ -439,7 +459,15 @@ async function refreshUserData() {
   state.modelInfo = await loadModelInfo();
   await loadRealtimeData();
   setupRealtimeSubscriptions();
-  if (state.session && !isProfileComplete()) {
+  state.temporaryPasswordReset = Boolean(
+    state.session?.user.email && localStorage.getItem(TEMPORARY_RESET_EMAIL_KEY) === state.session.user.email.toLowerCase(),
+  );
+  if (state.session && state.temporaryPasswordReset) {
+    state.currentPage = "settings";
+    state.settingsTab = "security";
+    state.message =
+      "Anda login menggunakan password sementara hasil reset. Demi keamanan akun, segera ubah password Anda melalui form Change Password di bawah ini.";
+  } else if (state.session && !isProfileComplete()) {
     state.currentPage = "settings";
     state.settingsTab = "profile";
     state.message = "Lengkapi role dan bio profil sebelum menggunakan fitur utama.";

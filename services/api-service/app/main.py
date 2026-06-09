@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import predict, profile, logs, eda
+from app.routes import auth, predict, profile, logs, eda
 from app.core.config import settings
 from app.services.ml_client import ml_client
 from app.utils.logger import setup_logger
@@ -25,6 +25,7 @@ app.add_middleware(
 )
 
 # Include Routers
+app.include_router(auth.router)
 app.include_router(predict.router)
 app.include_router(profile.router)
 app.include_router(logs.router)

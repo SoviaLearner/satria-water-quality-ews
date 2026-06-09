@@ -205,7 +205,44 @@ def train_and_log_models(test_size: float = 0.2) -> Dict[str, Any]:
         final_metrics = best["metrics"]
         is_tuned = False
 
-        if best_name in param_grids:
+        if best_name == "lightgbm":
+            print(f"\nMenggunakan Hyperparameter Teroptimasi Optuna dari Notebook untuk {best_name}...")
+            best_params = {
+                'objective': 'multiclass',
+                'n_estimators': 381,
+                'learning_rate': 0.04401365325810732,
+                'max_depth': 3,
+                'num_leaves': 16,
+                'min_child_samples': 65,
+                'reg_alpha': 1.6733974226634147,
+                'reg_lambda': 10.528357386030308,
+                'subsample': 0.5072791232881037,
+                'colsample_bytree': 0.647205489748126,
+                'min_split_gain': 0.05023389980947347,
+                'class_weight': 'balanced',
+                'random_state': RANDOM_STATE,
+                'n_jobs': -1,
+                'verbose': -1
+            }
+            tuned_classifier = LGBMClassifier(**best_params)
+            tuned_pipeline = Pipeline([
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", RobustScaler()),
+                ("classifier", tuned_classifier)
+            ])
+            with mlflow.start_run(run_name=f"{best_name}_tuned", nested=True):
+                tuned_pipeline.fit(X_train, y_train)
+                tuned_metrics = evaluate_model(tuned_pipeline, X_test, y_test)
+                
+                print(f"Skor F1-Macro Tuned (Optuna): {tuned_metrics['f1_macro']:.4f} (Baseline: {best['metrics']['f1_macro']:.4f})")
+                
+                mlflow.log_params(best_params)
+                mlflow.log_metrics(tuned_metrics)
+                
+                final_pipeline = tuned_pipeline
+                final_metrics = tuned_metrics
+                is_tuned = True
+        elif best_name in param_grids:
             print(f"\nMelakukan Hyperparameter Tuning untuk model terbaik ({best_name})...")
             # Jalankan tuning dalam nested run khusus
             with mlflow.start_run(run_name=f"{best_name}_tuned", nested=True):

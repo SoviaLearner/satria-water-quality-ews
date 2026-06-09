@@ -124,7 +124,7 @@ def get_user_risk_count(user_id: str) -> int:
             supabase.table(SUPABASE_PREDICTION_TABLE)
             .select("id", count="exact")
             .eq("user_id", user_id)
-            .ilike("predicted_suitability_tier", "%Reduced%")
+            .in_("predicted_suitability_tier", ["Restricted / Stressed", "Unsuitable / Critical", "Reduced Suitability"])
             .execute()
         )
         # response.count holds the exact count when count is specified

@@ -1,8 +1,0 @@
-channels:
-- conda-forge
-dependencies:
-- pip<=26.1.1
-- pip:
-  - mlflow==2.11.3
-  - pycaret==3.3.2
-name: aquaculture_suitability-env

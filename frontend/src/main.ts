@@ -23,6 +23,30 @@ const TEMPORARY_RESET_PASSWORD = "12345678";
 const TEMPORARY_RESET_EMAIL_KEY = "satria_temporary_reset_email";
 const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
 
+function navigate(
+  page: AppPage,
+  options?: {
+    replace?: boolean;
+    skipHistory?: boolean;
+  },
+) {
+  state.currentPage = page;
+
+  if (options?.skipHistory) {
+    return;
+  }
+
+  const url = `#${page}`;
+
+  if (options?.replace) {
+    window.history.replaceState({ page }, "", url);
+  } else {
+    window.history.pushState({ page }, "", url);
+  }
+}
+
+
+
 if (!app) {
   throw new Error("Root app element tidak ditemukan.");
 }
@@ -124,7 +148,7 @@ function bindEvents() {
   });
   document.querySelectorAll<HTMLElement>("[data-page]").forEach((element) => {
     element.addEventListener("click", () => {
-      state.currentPage = element.dataset.page as AppPage;
+      navigate(element.dataset.page as AppPage);
       state.message = "";
       if (!state.session && state.currentPage === "home") {
         state.authMode = "login";
@@ -137,7 +161,7 @@ function bindEvents() {
         return;
       }
       if (state.session && !isProfileComplete() && !["home", "settings", "reset-password", "eda"].includes(state.currentPage)) {
-        state.currentPage = "settings";
+        navigate("settings");
         state.settingsTab = "profile";
         state.message = label("profileRequiredMessage");
         render();
@@ -153,7 +177,7 @@ function bindEvents() {
   document.querySelectorAll<HTMLElement>("[data-auth-mode]").forEach((element) => {
     element.addEventListener("click", () => {
       state.authMode = element.dataset.authMode === "register" ? "register" : "login";
-      state.currentPage = "login";
+      navigate("login");
       state.message = "";
       render();
     });
@@ -222,7 +246,7 @@ async function handleAuthSubmit(event: Event) {
     localStorage.getItem(TEMPORARY_RESET_EMAIL_KEY) === email.toLowerCase()
   ) {
     state.temporaryPasswordReset = true;
-    state.currentPage = "settings";
+    navigate("settings");
     state.settingsTab = "security";
     state.message = label("temporaryPasswordNotice");
   }
@@ -426,7 +450,7 @@ async function handleResetPasswordSubmit(event: Event) {
   state.message = "Password berhasil diperbarui. Silakan login kembali.";
   await supabase.auth.signOut();
   state.session = null;
-  state.currentPage = "login";
+  navigate("login");
   state.authMode = "login";
   render();
 }
@@ -453,7 +477,7 @@ async function handleProfileSave(event: Event) {
     state.profile = await saveProfile(state.session, formData);
     state.message = label("profileSavedMessage");
     if (isProfileComplete()) {
-      state.currentPage = "prediction";
+      navigate("prediction");
     }
   } catch (error) {
     state.message = error instanceof Error ? error.message : label("profileSaveFailedMessage");
@@ -501,7 +525,7 @@ async function handleLogout() {
   state.userRiskCount = 0;
   state.latestPrediction = null;
   state.realtimeConnected = false;
-  state.currentPage = "home";
+  navigate("home");
   render();
 }
 
@@ -514,11 +538,11 @@ async function refreshUserData() {
     state.session?.user.email && localStorage.getItem(TEMPORARY_RESET_EMAIL_KEY) === state.session.user.email.toLowerCase(),
   );
   if (state.session && state.temporaryPasswordReset) {
-    state.currentPage = "settings";
+    navigate("settings");
     state.settingsTab = "security";
     state.message = label("temporaryPasswordNotice");
   } else if (state.session && !isProfileComplete()) {
-    state.currentPage = "settings";
+    navigate("settings");
     state.settingsTab = "profile";
     state.message = label("profileRequiredMessage");
   }
@@ -632,20 +656,56 @@ function isRecoveryRoute() {
   return query.get("reset-password") === "1" || hash.get("type") === "recovery";
 }
 
-supabase.auth.getSession().then(({ data }) => {
-  state.session = data.session;
-  if (isRecoveryRoute()) {
-    state.currentPage = "reset-password";
-    window.history.replaceState({}, "", window.location.pathname);
+
+window.addEventListener("popstate", (event) => {
+  const page =
+    event.state?.page ??
+    (window.location.hash.replace("#", "") as AppPage);
+
+  if (!page) return;
+
+  state.currentPage = page;
+  state.message = "";
+
+  if (["analytics", "reports", "eda"].includes(page)) {
+    loadRealtimeData().then(render);
+  } else {
+    render();
   }
-  refreshUserData().then(render);
 });
 
-supabase.auth.onAuthStateChange((event: AuthChangeEvent, nextSession: Session | null) => {
-  state.session = nextSession;
-  if (event === "PASSWORD_RECOVERY") {
-    state.currentPage = "reset-password";
-    window.history.replaceState({}, "", window.location.pathname);
+supabase.auth.getSession().then(({ data }) => {
+  state.session = data.session;
+
+  const hashPage = window.location.hash.replace("#", "");
+
+  if (hashPage) {
+    state.currentPage = hashPage as AppPage;
   }
-  refreshUserData().then(render);
+
+  if (isRecoveryRoute()) {
+    navigate("reset-password", { replace: true });
+  }
+
+  refreshUserData().then(() => {
+    render();
+
+    window.history.replaceState(
+      { page: state.currentPage },
+      "",
+      `#${state.currentPage}`,
+    );
+  });
 });
+
+supabase.auth.onAuthStateChange(
+  (event: AuthChangeEvent, nextSession: Session | null) => {
+    state.session = nextSession;
+
+    if (event === "PASSWORD_RECOVERY") {
+      navigate("reset-password", { replace: true });
+    }
+
+    refreshUserData().then(render);
+  },
+);

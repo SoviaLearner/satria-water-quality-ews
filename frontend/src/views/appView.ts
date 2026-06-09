@@ -366,10 +366,35 @@ function renderRecommendation(tier: string) {
 }
 
 function renderAnalyticsPage(state: AppState) {
+  const label = (key: Parameters<typeof t>[1]) => t(state.language, key);
   const userRows = state.predictionLogs.map((log) => log.input_data || {});
   const stats = computeEdaStats(userRows);
   const active = numericParameters.find((item) => item.key === state.analyticsMetric);
-  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>User Analytics Dashboard</h1><p>Visualisasi ini memakai riwayat input dan hasil prediksi milik user aktif, bukan dataset global EDA.</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? "Realtime connected" : "Realtime pending"}</span></div><button class="refresh-button" id="refreshData" type="button">Refresh</button></div><div class="insight-strip"><div><span>User Logs</span><strong>${formatNumber(state.predictionLogs.length)}</strong></div><div><span>Avg pH</span><strong>${stats.avgPh.toFixed(2)}</strong></div><div><span>Avg Nitrite</span><strong>${stats.nitriteMean.toFixed(3)}</strong></div><div><span>Latest Status</span><strong>${escapeHtml(state.predictionLogs[0]?.predicted_suitability_tier || "N/A")}</strong></div></div>${!state.predictionLogs.length ? `<div class="empty-analytics">Belum ada riwayat prediksi user. Jalankan Prediction terlebih dahulu agar grafik realtime terisi dari prediction_results.</div>` : ""}<div class="analytics-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>User Water Trends: ${escapeHtml(active?.label || "Parameter")}</h2><p>Sampling dari prediction_results.input_data milik akun ini.</p></div>${renderMetricTabs(state.analyticsMetric, "analytics")}</div>${renderLineChart(userRows, state.analyticsMetric, "temperature")}</article><article class="chart-card"><h2>Status Classes</h2>${renderDonut(state.predictionLogs)}</article><article class="chart-card"><h2>${escapeHtml(active?.label || "Parameter")} Levels</h2>${renderBarChart(userRows, state.analyticsMetric)}</article><article class="chart-card"><h2>Nitrite Levels</h2>${renderBarChart(userRows, "nitrite_mg_l_1")}</article><article class="chart-card wide"><h2>User Parameter Correlation</h2><p class="chart-caption">Korelasi dihitung dari input historis user. Tambahkan lebih banyak prediksi agar pola makin stabil.</p>${renderHeatmap(userRows)}</article></div></section>`;
+  const parameterName = active ? t(state.language, parameterTranslationKey(active.key)) : "Parameter";
+  const latestStatus = state.predictionLogs[0]?.predicted_suitability_tier || "N/A";
+  return `<section class="work-page"><div class="page-heading row-heading"><div><h1>${label("monitoringTitle")}</h1><p>${label("monitoringSubtitle")}</p><span class="realtime-badge ${state.realtimeConnected ? "on" : ""}">${state.realtimeConnected ? label("monitoringRealtimeOn") : label("monitoringRealtimePending")}</span></div><button class="refresh-button" id="refreshData" type="button">${label("refresh")}</button></div><div class="insight-strip"><div><span>${label("userLogs")}</span><strong>${formatNumber(state.predictionLogs.length)}</strong></div><div><span>${label("avgPh")}</span><strong>${stats.avgPh.toFixed(2)}</strong></div><div><span>${label("avgNitrite")}</span><strong>${stats.nitriteMean.toFixed(3)}</strong></div><div><span>${label("latestStatus")}</span><strong>${escapeHtml(translateStatus(latestStatus, state.language))}</strong></div></div>${!state.predictionLogs.length ? `<div class="empty-analytics">${label("noDataAnalytics")}</div>` : ""}<div class="analytics-grid"><article class="chart-card wide"><div class="chart-heading"><div><h2>${label("userWaterTrends")}: ${escapeHtml(parameterName)}</h2><p>${label("trendDescription")}</p></div>${renderMetricTabs(state.analyticsMetric, "analytics", state.language)}</div>${renderLineChart(userRows, state.analyticsMetric, "temperature", state.language)}</article><article class="chart-card"><h2>${label("statusClasses")}</h2>${renderDonut(state.predictionLogs, state.language)}</article><article class="chart-card"><h2>${escapeHtml(parameterName)} ${label("levels")}</h2>${renderBarChart(userRows, state.analyticsMetric, state.language)}</article><article class="chart-card"><h2>${label("nitriteLevels")}</h2>${renderBarChart(userRows, "nitrite_mg_l_1", state.language)}</article><article class="chart-card wide"><h2>${label("userParameterCorrelation")}</h2><p class="chart-caption">${label("correlationCaption")}</p>${renderHeatmap(userRows, state.language)}</article></div></section>`;
+}
+
+function parameterTranslationKey(key: string): Parameters<typeof t>[1] {
+  const map: Record<string, Parameters<typeof t>[1]> = {
+    temperature: "paramTemperature",
+    ph: "paramPh",
+    dissolved_oxygen_mg_l: "paramDissolvedOxygen",
+    ammonia_mg_l_1: "paramAmmonia",
+    nitrite_mg_l_1: "paramNitrite",
+    phosphorus_mg_l_1: "paramPhosphorus",
+    total_hardness_mg_l_1: "paramHardness",
+    total_alkalinity_mg_l_1: "paramAlkalinity",
+  };
+  return map[key] || "valueAxis";
+}
+
+function translateStatus(status: string, language: AppState["language"]) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("optimal")) return t(language, "statusOptimal");
+  if (normalized.includes("moderate")) return t(language, "statusModerate");
+  if (normalized.includes("reduced")) return t(language, "statusReduced");
+  return status || t(language, "statusUnknown");
 }
 
 function renderReportsPage(state: AppState) {

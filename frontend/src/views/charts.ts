@@ -1,6 +1,7 @@
 import { numericParameters } from "../constants";
-import type { EdaRecord, PredictionLog } from "../types";
+import type { EdaRecord, Language, PredictionLog } from "../types";
 import { escapeHtml, statusClass } from "../utils/format";
+import { t } from "../utils/translations";
 
 function values(rows: EdaRecord[], key: string) {
   return rows.map((row) => Number(row[key])).filter(Number.isFinite);
@@ -44,38 +45,70 @@ function points(nums: number[], width = 640, height = 260, pad = 32) {
     .join(" ");
 }
 
-export function renderMetricTabs(activeKey: string, group: "eda" | "analytics") {
+const parameterTranslationKeys: Record<string, Parameters<typeof t>[1]> = {
+  temperature: "paramTemperature",
+  ph: "paramPh",
+  dissolved_oxygen_mg_l: "paramDissolvedOxygen",
+  ammonia_mg_l_1: "paramAmmonia",
+  nitrite_mg_l_1: "paramNitrite",
+  phosphorus_mg_l_1: "paramPhosphorus",
+  total_hardness_mg_l_1: "paramHardness",
+  total_alkalinity_mg_l_1: "paramAlkalinity",
+};
+
+function label(language: Language, key: Parameters<typeof t>[1]) {
+  return t(language, key);
+}
+
+function parameterLabel(key: string, language: Language) {
+  const translationKey = parameterTranslationKeys[key];
+  if (translationKey) return label(language, translationKey);
+  const meta = numericParameters.find((item) => item.key === key);
+  return meta?.label || key.replaceAll("_", " ");
+}
+
+function translatedStatus(status: string, language: Language) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("optimal")) return label(language, "statusOptimal");
+  if (normalized.includes("moderate")) return label(language, "statusModerate");
+  if (normalized.includes("reduced")) return label(language, "statusReduced");
+  return status || label(language, "statusUnknown");
+}
+
+export function renderMetricTabs(activeKey: string, group: "eda" | "analytics", language: Language = "id") {
   return `<div class="chart-tabs">${numericParameters
     .slice(0, 6)
     .map(
       (item) =>
-        `<button class="${activeKey === item.key ? "active" : ""}" type="button" data-chart-group="${group}" data-chart-key="${item.key}">${item.label}</button>`,
+        `<button class="${activeKey === item.key ? "active" : ""}" type="button" data-chart-group="${group}" data-chart-key="${item.key}">${escapeHtml(parameterLabel(item.key, language))}</button>`,
     )
     .join("")}</div>`;
 }
 
-export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondaryKey = "temperature") {
+export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondaryKey = "temperature", language: Language = "id") {
   const primary = values(rows, primaryKey);
   const secondary = values(rows, secondaryKey);
   const primaryMeta = numericParameters.find((item) => item.key === primaryKey);
   const secondaryMeta = numericParameters.find((item) => item.key === secondaryKey);
   if (primary.length < 2) {
-    return renderEmptyChart("Belum cukup data trend", "Minimal 2 log prediksi diperlukan agar garis perubahan parameter bisa dibaca.");
+    return renderEmptyChart(label(language, "emptyTrendTitle"), label(language, "emptyTrendMessage"));
   }
 
   return `
     <div class="chart-legend">
-      <span><i class="teal"></i>${escapeHtml(primaryMeta?.label || primaryKey)}</span>
-      <span><i class="blue"></i>${escapeHtml(secondaryMeta?.label || secondaryKey)}</span>
+      <span><i class="teal"></i>${escapeHtml(label(language, "chartLegendPrimary"))}: ${escapeHtml(parameterLabel(primaryKey, language))}</span>
+      <span><i class="blue"></i>${escapeHtml(label(language, "chartLegendTemperature"))}: ${escapeHtml(parameterLabel(secondaryKey, language))}</span>
     </div>
-    <p class="chart-help">Cara baca: garis naik berarti nilai parameter meningkat pada sampel berikutnya. Garis putus-putus menjadi pembanding suhu agar perubahan kualitas air lebih mudah dibandingkan.</p>
+    <p class="chart-help">${escapeHtml(label(language, "lineChartHelp"))}</p>
     <div class="svg-chart line-chart">
-      <svg viewBox="0 0 640 260" preserveAspectRatio="none" role="img" aria-label="Line chart">
+      <svg viewBox="0 0 640 300" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(parameterLabel(primaryKey, language))} line chart">
         ${renderGridLines()}
-        <polyline class="series teal" points="${points(primary)}"></polyline>
-        <polyline class="series blue dashed" points="${points(secondary)}"></polyline>
+        <polyline class="series teal" points="${points(primary, 640, 260)}"></polyline>
+        <polyline class="series blue dashed" points="${points(secondary, 640, 260)}"></polyline>
+        <text class="axis-title x-axis-title" x="320" y="292">${escapeHtml(label(language, "dateTimeAxis"))}</text>
+        <text class="axis-title y-axis-title" x="12" y="146" transform="rotate(-90 12 146)">${escapeHtml(label(language, "valueAxis"))}</text>
       </svg>
-      <div class="x-labels"><span>Start</span><span>Sampled realtime rows</span><span>Latest</span></div>
+      <div class="x-labels"><span>${escapeHtml(label(language, "chartStart"))}</span><span>${escapeHtml(label(language, "chartSampledRows"))}</span><span>${escapeHtml(label(language, "chartLatest"))}</span></div>
     </div>
   `;
 }
@@ -108,33 +141,41 @@ export function renderHistogram(rows: EdaRecord[], key: string) {
   `;
 }
 
-export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1") {
+export function renderBarChart(rows: EdaRecord[], key = "ammonia_mg_l_1", language: Language = "id") {
   const nums = sample(values(rows, key), 8);
   const { min, max } = extent(nums);
   const meta = numericParameters.find((item) => item.key === key);
   const range = Math.max(max - min, Number.EPSILON);
   if (!nums.length) {
-    return renderEmptyChart("Belum ada sampel", `Jalankan prediksi terlebih dahulu agar level ${escapeHtml(meta?.label || key)} bisa divisualisasikan.`);
+    return renderEmptyChart(label(language, "emptySampleTitle"), label(language, "emptySampleMessage"));
   }
+  const yAxis = key === "nitrite_mg_l_1" ? label(language, "nitrateAxis") : `${parameterLabel(key, language)}${meta?.unit ? ` (${meta.unit})` : ""}`;
 
   return `
-    <div class="chart-caption">${escapeHtml(meta?.label || key)} sampled levels</div>
-    <p class="chart-help">Cara baca: setiap batang adalah sampel riwayat. Batang tinggi menunjukkan nilai parameter lebih besar dibanding sampel lain pada grafik yang sama.</p>
-    ${renderChartStats(nums, meta?.unit)}
-    <div class="svg-chart bar-chart">
+    <div class="chart-caption">${escapeHtml(parameterLabel(key, language))} ${escapeHtml(label(language, "levels"))}</div>
+    <p class="chart-help">${escapeHtml(label(language, "barChartHelp"))}</p>
+    ${renderChartStats(nums, meta?.unit, language)}
+    <div class="axis-label-row"><span>${escapeHtml(yAxis)}</span></div>
+    <div class="svg-chart bar-chart readable-bar-chart" style="--bar-count:${nums.length}">
       ${nums
         .map(
           (value, index) => {
             const height = 16 + ((value - min) / range) * 76;
-            return `<button type="button" title="Sample ${index + 1}: ${formatMetricValue(value, meta?.unit)}" style="height:${height}%"><span>${formatMetricValue(value, meta?.unit)}</span></button>`;
+            return `<button type="button" title="${escapeHtml(label(language, "sample"))} ${index + 1}: ${formatMetricValue(value, meta?.unit)}" style="height:${height}%;--bar-delay:${index * 55}ms"><span>${formatMetricValue(value, meta?.unit)}</span></button>`;
           },
         )
         .join("")}
     </div>
+    <div class="bar-x-axis" aria-hidden="true">
+      <span>${escapeHtml(label(language, "sample"))} 1</span>
+      <span>${escapeHtml(label(language, "sample"))} ${Math.max(Math.ceil(nums.length / 2), 1)}</span>
+      <span>${escapeHtml(label(language, "chartLatest"))}</span>
+    </div>
+    <div class="chart-axis-caption">${escapeHtml(label(language, "sampledRowsAxis"))}</div>
   `;
 }
 
-export function renderDonut(logs: PredictionLog[]) {
+export function renderDonut(logs: PredictionLog[], language: Language = "id") {
   const counts = logs.reduce<Record<string, number>>((acc, log) => {
     const key = log.predicted_suitability_tier || "Unknown";
     acc[key] = (acc[key] || 0) + 1;
@@ -147,9 +188,9 @@ export function renderDonut(logs: PredictionLog[]) {
 
   return `
     <div class="donut" style="--donut-bg:conic-gradient(#0fb5a5 0 ${optimal}%, #ffc700 ${optimal}% ${moderateEnd}%, #ff7a59 ${moderateEnd}% 100%)"></div>
-    <p class="chart-help centered">Cara baca: warna dominan menunjukkan kategori prediksi yang paling sering muncul pada riwayat user.</p>
+    <p class="chart-help centered">${escapeHtml(label(language, "donutChartHelp"))}</p>
     <div class="donut-legend">
-      ${Object.entries(counts).map(([label, count]) => `<span class="${statusClass(label)}">${escapeHtml(label)}: ${count}</span>`).join("") || "<span>No prediction logs yet</span>"}
+      ${Object.entries(counts).map(([status, count]) => `<span class="${statusClass(status)}" title="${escapeHtml(translatedStatus(status, language))}: ${count}">${escapeHtml(translatedStatus(status, language))}: ${count}</span>`).join("") || `<span>${escapeHtml(label(language, "noPredictionLogs"))}</span>`}
     </div>
   `;
 }
@@ -176,20 +217,20 @@ export function renderDatasetClassDistribution(rows: EdaRecord[]) {
   `;
 }
 
-export function renderHeatmap(rows: EdaRecord[]) {
+export function renderHeatmap(rows: EdaRecord[], language: Language = "id") {
   const keys = ["ph", "temperature", "dissolved_oxygen_mg_l", "nitrite_mg_l_1", "ammonia_mg_l_1"];
   const completeRows = rows.filter((row) => keys.every((key) => Number.isFinite(Number(row[key]))));
   if (completeRows.length < 3) {
     return renderEmptyChart(
-      "Belum cukup data korelasi",
-      "Minimal 3 log prediksi dengan parameter lengkap diperlukan. Nilai 1.00 hanya akan ditampilkan setelah korelasi benar-benar bermakna.",
+      label(language, "emptyCorrelationTitle"),
+      label(language, "emptyCorrelationMessage"),
     );
   }
-  return `<p class="chart-help">Cara baca: nilai mendekati 1 berarti hubungan antar parameter searah kuat, mendekati -1 berarti berlawanan, dan mendekati 0 berarti hubungannya lemah.</p><div class="heatmap-axis"><span></span>${keys.map((key) => `<strong>${shortLabel(key)}</strong>`).join("")}${keys
+  return `<p class="chart-help">${escapeHtml(label(language, "heatmapHelp"))}</p><div class="heatmap-axis"><span></span>${keys.map((key) => `<strong>${escapeHtml(parameterLabel(key, language))}</strong>`).join("")}${keys
     .flatMap((rowKey) =>
-      [`<strong>${shortLabel(rowKey)}</strong>`, ...keys.map((colKey) => {
+      [`<strong>${escapeHtml(parameterLabel(rowKey, language))}</strong>`, ...keys.map((colKey) => {
         const corr = rowKey === colKey ? 1 : pseudoCorrelation(rows, rowKey, colKey);
-        return `<button type="button" title="${shortLabel(rowKey)} vs ${shortLabel(colKey)}: ${corr.toFixed(2)}" style="--alpha:${Math.max(Math.abs(corr), 0.18)}">${corr.toFixed(2)}</button>`;
+        return `<button type="button" title="${escapeHtml(parameterLabel(rowKey, language))} vs ${escapeHtml(parameterLabel(colKey, language))}: ${corr.toFixed(2)}" style="--alpha:${Math.max(Math.abs(corr), 0.18)}">${corr.toFixed(2)}</button>`;
       })],
     )
     .join("")}</div>`;
@@ -286,9 +327,9 @@ function shortLabel(key: string) {
   return meta?.label || key.replaceAll("_", " ");
 }
 
-function renderChartStats(nums: number[], unit = "") {
+function renderChartStats(nums: number[], unit = "", language: Language = "id") {
   const { min, max } = extent(nums);
-  return `<div class="chart-stat-row"><span>Min <b>${formatMetricValue(min, unit)}</b></span><span>Avg <b>${formatMetricValue(average(nums), unit)}</b></span><span>Max <b>${formatMetricValue(max, unit)}</b></span></div>`;
+  return `<div class="chart-stat-row"><span>${escapeHtml(label(language, "min"))} <b>${formatMetricValue(min, unit)}</b></span><span>${escapeHtml(label(language, "avg"))} <b>${formatMetricValue(average(nums), unit)}</b></span><span>${escapeHtml(label(language, "max"))} <b>${formatMetricValue(max, unit)}</b></span></div>`;
 }
 
 function renderEmptyChart(title: string, message: string) {

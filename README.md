@@ -1,5 +1,15 @@
 # SATRIA Water Quality EWS
 
+[![React](https://img.shields.io/badge/React-18%2B-20232A?style=flat-square&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-007ACC?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.95%2B-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python)](https://www.python.org/)
+[![MLflow](https://img.shields.io/badge/MLflow-Tracking-0194E2?style=flat-square&logo=mlflow)](https://mlflow.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
+[![Docker](https://img.shields.io/badge/Docker-Orchestration-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Google Cloud](https://img.shields.io/badge/Google%20Cloud%20Run-Backend-4285F4?style=flat-square&logo=google-cloud)](https://cloud.google.com/run)
+[![Vercel](https://img.shields.io/badge/Vercel-Frontend-000000?style=flat-square&logo=vercel)](https://vercel.com/)
+
 SATRIA adalah aplikasi *Early Warning System* untuk klasifikasi kelayakan kualitas air akuakultur. Sistem ini dibangun dengan arsitektur **Microservices** yang menggabungkan model Machine Learning (dengan MLOps/MLflow), ekosistem backend terdistribusi (API Gateway, ML Service, Data Service) berbasis FastAPI, Supabase (Database & Auth terpusat), serta *dashboard* interaktif frontend React (Vite) untuk memantau metrik kualitas air, menjalankan prediksi EWS secara otomatis maupun manual, visualisasi analitik, *Exploratory Data Analysis* (EDA), dan merekam log prediksi waktu nyata.
 
 ## 🚀 Arsitektur Sistem (Microservices)
@@ -56,6 +66,28 @@ Deployment:
 - EDA page with descriptive statistics, distribution chart, and outlier analysis.
 - Deployment files for Vercel and Docker.
 
+## 🌍 Live Deployment (Akses Publik)
+
+Aplikasi SATRIA telah di-*deploy* ke lingkungan produksi dan dapat diakses secara publik:
+
+| Layanan | URL |
+|---|---|
+| **Frontend Dashboard (Vercel)** | https://satria-water-quality-ews-sage.vercel.app/ |
+| **API Gateway (Cloud Run)** | https://api-service-aqrtlknopq-et.a.run.app |
+| **Data Service (Cloud Run)** | https://data-service-aqrtlknopq-et.a.run.app |
+| **ML Service (Cloud Run)** | https://ml-service-aqrtlknopq-et.a.run.app |
+
+### 🐳 Docker Hub Registry (Public Images)
+
+Seluruh microservices telah dikemas menjadi Docker image resmi dan dapat diakses secara publik di Docker Hub:
+
+| Layanan | Image & Repository | Tautan Langsung |
+|---|---|---|
+| **API Gateway** | `arfiadi/satria-api-service` | [Docker Hub](https://hub.docker.com/r/arfiadi/satria-api-service) |
+| **ML Service** | `arfiadi/satria-ml-service` | [Docker Hub](https://hub.docker.com/r/arfiadi/satria-ml-service) |
+| **Data Service** | `arfiadi/satria-data-service` | [Docker Hub](https://hub.docker.com/r/arfiadi/satria-data-service) |
+| **Frontend** | `arfiadi/satria-frontend` | [Docker Hub](https://hub.docker.com/r/arfiadi/satria-frontend) |
+
 ## Dataset
 
 Dataset:
@@ -90,17 +122,19 @@ Prediction output:
 ```text
 satria-water-quality-ews/
 |-- frontend/                  # Source code UI/UX (React + Vite)
+|   |-- src/                   # Kode utama aplikasi
+|   `-- vercel.json            # Konfigurasi deploy frontend ke Vercel
 |
 |-- services/                  # Microservices backend
 |   |-- api-service/           # FastAPI Gateway (Port: 8000)
 |   |-- ml-service/            # ML inference API & skrip MLOps training (Port: 8001)
 |   `-- data-service/          # Operasi basis data Supabase (Port: 8002)
 |
-|-- models/                    # Dikelola secara otomatis oleh MLOps
+|-- models/                    # Diregistrasi oleh MLflow & diunduh otomatis
 |
-|-- notebooks/
-|   |-- eda_aquaculture.ipynb
-|   |-- preprocessing_aquaculture.ipynb
+|-- notebooks/                 # Eksperimen data & pemodelan
+|   |-- Data_Understanding_dan_EDA.ipynb
+|   |-- modelling.ipynb        # Eksperimen model machine learning
 |   |-- manual_mlops_pipeline.ipynb
 |   `-- pycaret_aqua_water_suitability_.ipynb
 |
@@ -108,14 +142,19 @@ satria-water-quality-ews/
 |   |-- create_profiles_table.sql
 |   |-- create_prediction_results_table.sql
 |   |-- create_water_quality_clean_table.sql
-|   `-- update_realtime_eda_and_prediction_policies.sql
+|   |-- update_realtime_eda_and_prediction_policies.sql
+|   `-- ready_safe_migration.sql
 |
-|-- docs/
-|   `-- DEPLOYMENT_CHECKLIST.md
+|-- docs/                      # Dokumentasi teknis proyek
+|   |-- BACKEND_SYSTEM_DESIGN.md
+|   |-- FRONTEND_ARCHITECTURE_BLUEPRINT.md
+|   |-- DEPLOYMENT_CHECKLIST.md
+|   |-- deployment_steps.md
+|   `-- model_selection_justification.md
 |
 |-- docker-compose.yml         # Orkestrasi container Docker
-|-- run.bat                    # Skrip launcher interaktif (Docker & Native)
-|-- vercel.json
+|-- run.bat                    # Skrip launcher interaktif (Windows)
+|-- run.sh                     # Skrip launcher interaktif (Linux/macOS)
 |-- .env.example
 |-- .dockerignore
 `-- README.md
@@ -212,7 +251,7 @@ Example prediction payload:
     "turbidity_cm": 45,
     "dissolved_oxygen_mg_l": 6.8,
     "biochemical_oxygen_demand_mg_l": 3.2,
-    "carbon_dioxide_co2": 8.4,
+    "carbon_dioxide_mg_l": 8.4,
     "ph": 7.4,
     "total_alkalinity_mg_l_1": 120,
     "total_hardness_mg_l_1": 180,
@@ -220,8 +259,9 @@ Example prediction payload:
     "ammonia_mg_l_1": 0.05,
     "nitrite_mg_l_1": 0.02,
     "phosphorus_mg_l_1": 0.3,
-    "hydrogen_sulfide_mg_l_1": 0.01,
-    "plankton_count_no_l_1": 2500
+    "hydrogen_sulphide_mg_l_1": 0.01,
+    "estimated_magnesium_mg_l_1": 40,
+    "plankton_abundance_no_l_1": 2500
   },
   "save_to_supabase": false
 }
@@ -231,25 +271,27 @@ Example prediction payload:
 
 Before final submission or demo:
 
-- Login/register user.
-- Save profile in Settings.
-- Update display name or password in Security and Privacy.
-- Run Prediction.
-- Check Reports and refresh logs.
+- Register or login a user.
+- Save profile in Settings (role, organization, and bio).
+- Update display name or password in Security & Privacy.
+- Run Prediction (submit a prediction request).
+- Check Reports and refresh logs (confirm prediction is successfully saved to Supabase).
 - Open Analytics and verify Dissolved Oxygen, Nitrite, and Correlation visuals.
-- Open EDA and verify Distribution and Outlier Analysis.
-- Check API Gateway `/health`.
-- Check Vercel env vars and Supabase RLS policies.
+- Open EDA and verify Parameter Distribution, Class Distribution, and Outlier Analysis.
+- Check API Gateway `/health` endpoint status.
+- Check Vercel environment variables and Supabase RLS policies.
 
 ## Notes
 
-More detailed deployment notes are available in:
+Dokumentasi detail mengenai desain sistem, deployment, dan pemodelan dapat diakses di:
 
-```text
-docs/DEPLOYMENT_CHECKLIST.md
-```
+- [BACKEND_SYSTEM_DESIGN.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/docs/BACKEND_SYSTEM_DESIGN.md)
+- [FRONTEND_ARCHITECTURE_BLUEPRINT.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/docs/FRONTEND_ARCHITECTURE_BLUEPRINT.md)
+- [DEPLOYMENT_CHECKLIST.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/docs/DEPLOYMENT_CHECKLIST.md)
+- [deployment_steps.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/docs/deployment_steps.md)
+- [model_selection_justification.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/docs/model_selection_justification.md)
 
-Lihat juga `README.md` terpisah yang berada di setiap direktori (misalnya `frontend/README.md` atau `services/ml-service/README.md`).
+Lihat juga `README.md` terpisah yang berada di setiap direktori (misalnya [frontend/README.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/frontend/README.md) atau [services/ml-service/README.md](file:///d:/ARFI/Kuliah/Project/satria-water-quality-ews/services/ml-service/README.md)).
 
 ## Authors
 

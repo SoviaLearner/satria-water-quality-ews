@@ -456,7 +456,7 @@ export function renderOutlierAnalysis(rows: EdaRecord[], language: Language = "i
   `;
 }
 
-export function renderClassDistribution(rows: EdaRecord[], language: Language = "id"): string {
+export function renderClassDistribution(_rows: EdaRecord[], language: Language = "id"): string {
   const data = [
     { tier: "Highly Suitable", count: 2800, pct: 65.12, color: "#0fb5a5" },
     { tier: "Restricted / Stressed", count: 1291, pct: 30.02, color: "#ff7a59" },

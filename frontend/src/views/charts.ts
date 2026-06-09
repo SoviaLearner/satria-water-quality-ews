@@ -104,8 +104,7 @@ export function renderMetricTabs(activeKey: string, group: "eda" | "analytics", 
 export function renderLineChart(rows: EdaRecord[], primaryKey: string, secondaryKey = "temperature", language: Language = "id") {
   const primary = values(rows, primaryKey);
   const secondary = values(rows, secondaryKey);
-  const primaryMeta = numericParameters.find((item) => item.key === primaryKey);
-  const secondaryMeta = numericParameters.find((item) => item.key === secondaryKey);
+
   if (primary.length < 2) {
     return renderEmptyChart(label(language, "emptyTrendTitle"), label(language, "emptyTrendMessage"));
   }
@@ -325,7 +324,7 @@ function renderBoxRow(rows: EdaRecord[], key: string) {
   return `<span title="${escapeHtml(meta?.label || key)} min ${min.toFixed(2)} max ${max.toFixed(2)}" style="--w:${width}%;--x:${x}%"><b>${escapeHtml(meta?.label || key)}</b><em>${outliers} outlier | IQR ${iqr.toFixed(3)}</em></span>`;
 }
 
-export function renderOutlierGuidance(rows: EdaRecord[], keys = numericParameters.slice(0, 6).map((item) => item.key)) {
+export function renderOutlierGuidance(rows: EdaRecord[], keys: string[] = numericParameters.slice(0, 6).map((item) => item.key as string)) {
   const summary = keys.map((key) => getOutlierSummary(rows, key)).filter((item) => item.count > 0);
   const highest = summary.sort((a, b) => b.count - a.count)[0];
 
@@ -389,10 +388,6 @@ function getOutlierSummary(rows: EdaRecord[], key: string) {
   };
 }
 
-function shortLabel(key: string) {
-  const meta = numericParameters.find((item) => item.key === key);
-  return meta?.label || key.replaceAll("_", " ");
-}
 
 function renderChartStats(nums: number[], unit = "", language: Language = "id") {
   const { min, max } = extent(nums);

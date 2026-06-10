@@ -91,9 +91,9 @@ Seluruh microservices telah dikemas menjadi Docker image resmi dan dapat diakses
 ## Dataset
 
 Dataset:
-- Title: Refined Aquaculture Water Suitability Signals
+- Title: Recalculated Aquaculture Water Suitability Signals WQI Derived
 - Theme: Aquaculture water suitability
-- Shape: 4,300 rows and 17 columns
+- Shape: 4,300 rows and 21 columns
 - Source: Kaggle
 
 Core input parameters:
@@ -106,11 +106,12 @@ Core input parameters:
 - Total Alkalinity
 - Total Hardness
 - Calcium
+- Estimated Magnesium
 - Ammonia
 - Nitrite
 - Phosphorus
-- Hydrogen Sulfide
-- Plankton Count
+- Hydrogen Sulphide
+- Plankton Abundance
 
 Prediction output:
 - `predicted_class_id`

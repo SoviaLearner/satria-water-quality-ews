@@ -11,7 +11,9 @@ venv/
 
 # Jupyter
 .ipynb_checkpoints/
-
+notebooks/*
+!notebooks/Data_Understanding_dan_EDA.ipynb
+!notebooks/modelling.ipynb
 # Data & Models
 *.pkl
 !services/ml-service/app/domains/water/artifacts/*.pkl
